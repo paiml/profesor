@@ -330,6 +330,7 @@ impl Hint {
 }
 
 #[cfg(test)]
+#[allow(clippy::panic)]
 mod tests {
     use super::*;
 
@@ -358,16 +359,47 @@ mod tests {
     }
 
     #[test]
+    fn test_lab_with_starter_file() {
+        let lab =
+            Lab::new("test", "Test").with_starter_file(StarterFile::new("main.rs", "fn main() {}"));
+
+        assert_eq!(lab.starter_files.len(), 1);
+        assert_eq!(lab.starter_files[0].path, "main.rs");
+    }
+
+    #[test]
+    fn test_lab_with_hint() {
+        let lab = Lab::new("test", "Test")
+            .with_hint(Hint::new(1, "Hint 1"))
+            .with_hint(Hint::new(2, "Hint 2"));
+
+        assert_eq!(lab.hints.len(), 2);
+    }
+
+    #[test]
     fn test_language_extension() {
         assert_eq!(Language::Rust.extension(), "rs");
         assert_eq!(Language::Python.extension(), "py");
         assert_eq!(Language::JavaScript.extension(), "js");
+        assert_eq!(Language::TypeScript.extension(), "ts");
+        assert_eq!(Language::Sql.extension(), "sql");
+        assert_eq!(Language::Markdown.extension(), "md");
     }
 
     #[test]
     fn test_language_name() {
         assert_eq!(Language::Rust.name(), "Rust");
+        assert_eq!(Language::Python.name(), "Python");
+        assert_eq!(Language::JavaScript.name(), "JavaScript");
         assert_eq!(Language::TypeScript.name(), "TypeScript");
+        assert_eq!(Language::Sql.name(), "SQL");
+        assert_eq!(Language::Markdown.name(), "Markdown");
+    }
+
+    #[test]
+    fn test_language_default() {
+        let lang = Language::default();
+        assert_eq!(lang, Language::Rust);
     }
 
     #[test]
@@ -380,11 +412,42 @@ mod tests {
     }
 
     #[test]
+    fn test_lab_step_with_description() {
+        let step = LabStep::new(1, "Step 1").with_description("Do something");
+
+        assert_eq!(step.description, "Do something");
+    }
+
+    #[test]
     fn test_step_validation() {
         let step = LabStep::new(1, "Create function")
             .with_validation(StepValidation::FunctionExists { name: "add".into() });
 
         assert!(step.validation.is_some());
+    }
+
+    #[test]
+    fn test_step_validation_tests_pass() {
+        let validation = StepValidation::TestsPass {
+            test_names: vec!["test_add".into(), "test_sub".into()],
+        };
+        if let StepValidation::TestsPass { test_names } = validation {
+            assert_eq!(test_names.len(), 2);
+        } else {
+            panic!("Expected TestsPass variant");
+        }
+    }
+
+    #[test]
+    fn test_step_validation_output_matches() {
+        let validation = StepValidation::OutputMatches {
+            expected: "Hello, World!".into(),
+        };
+        if let StepValidation::OutputMatches { expected } = validation {
+            assert_eq!(expected, "Hello, World!");
+        } else {
+            panic!("Expected OutputMatches variant");
+        }
     }
 
     #[test]
@@ -406,7 +469,15 @@ mod tests {
     #[test]
     fn test_difficulty_label() {
         assert_eq!(Difficulty::Beginner.label(), "Beginner");
+        assert_eq!(Difficulty::Intermediate.label(), "Intermediate");
+        assert_eq!(Difficulty::Advanced.label(), "Advanced");
         assert_eq!(Difficulty::Expert.label(), "Expert");
+    }
+
+    #[test]
+    fn test_difficulty_default() {
+        let diff = Difficulty::default();
+        assert_eq!(diff, Difficulty::Beginner);
     }
 }
 

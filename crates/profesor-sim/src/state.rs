@@ -441,6 +441,36 @@ mod tests {
     }
 
     #[test]
+    fn test_sim_state_set_variable() {
+        let mut state = SimState::new();
+        state.set_variable("x", Value::Int(42));
+        assert_eq!(state.get_variable("x"), Some(&Value::Int(42)));
+    }
+
+    #[test]
+    fn test_sim_state_entities() {
+        let state = SimState::new()
+            .with_entity(Entity::new("player").with_position(10.0, 20.0))
+            .with_entity(Entity::new("enemy").with_position(50.0, 60.0));
+
+        assert!(state.get_entity("player").is_some());
+        assert!(state.get_entity("enemy").is_some());
+        assert!(state.get_entity("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_sim_state_get_entity_mut() {
+        let mut state =
+            SimState::new().with_entity(Entity::new("player").with_position(10.0, 20.0));
+
+        if let Some(player) = state.get_entity_mut("player") {
+            player.position = Position { x: 100.0, y: 200.0 };
+        }
+
+        assert_eq!(state.get_entity("player").unwrap().position.x, 100.0);
+    }
+
+    #[test]
     fn test_entity() {
         let entity = Entity::new("player")
             .with_position(100.0, 200.0)
@@ -448,6 +478,14 @@ mod tests {
 
         assert_eq!(entity.id, "player");
         assert_eq!(entity.position.x, 100.0);
+        assert_eq!(entity.properties.get("health"), Some(&Value::Int(100)));
+    }
+
+    #[test]
+    fn test_position_default() {
+        let pos = Position::default();
+        assert!((pos.x).abs() < f64::EPSILON);
+        assert!((pos.y).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -478,6 +516,74 @@ mod tests {
     }
 
     #[test]
+    fn test_trigger_mismatch() {
+        let sim = Simulation::new("test", "Test").with_transition(
+            Transition::new(Trigger::UserClick {
+                target: "button".into(),
+            })
+            .with_action(Action::AdvanceStep),
+        );
+
+        let mut instance = sim.instantiate();
+
+        // Wrong target
+        let actions = instance.process_trigger(&Trigger::UserClick {
+            target: "other".into(),
+        });
+        assert!(actions.is_empty());
+
+        // Wrong trigger type
+        let actions = instance.process_trigger(&Trigger::UserDrag {
+            target: "button".into(),
+        });
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn test_user_drag_trigger() {
+        let sim = Simulation::new("test", "Test").with_transition(
+            Transition::new(Trigger::UserDrag {
+                target: "slider".into(),
+            })
+            .with_action(Action::AdvanceStep),
+        );
+
+        let mut instance = sim.instantiate();
+        let actions = instance.process_trigger(&Trigger::UserDrag {
+            target: "slider".into(),
+        });
+        assert_eq!(actions.len(), 1);
+        assert_eq!(instance.step_count(), 1);
+    }
+
+    #[test]
+    fn test_timer_trigger() {
+        let sim = Simulation::new("test", "Test").with_transition(
+            Transition::new(Trigger::Timer { interval_ms: 1000 }).with_action(Action::AdvanceStep),
+        );
+
+        let mut instance = sim.instantiate();
+        let actions = instance.process_trigger(&Trigger::Timer { interval_ms: 500 });
+        assert_eq!(actions.len(), 1);
+    }
+
+    #[test]
+    fn test_state_change_trigger() {
+        let sim = Simulation::new("test", "Test").with_transition(
+            Transition::new(Trigger::StateChange {
+                variable: "score".into(),
+            })
+            .with_action(Action::AdvanceStep),
+        );
+
+        let mut instance = sim.instantiate();
+        let actions = instance.process_trigger(&Trigger::StateChange {
+            variable: "score".into(),
+        });
+        assert_eq!(actions.len(), 1);
+    }
+
+    #[test]
     fn test_conditional_transition() {
         let sim = Simulation::new("test", "Test")
             .with_initial_state(SimState::new().with_variable("score", Value::Int(100)))
@@ -504,11 +610,114 @@ mod tests {
     }
 
     #[test]
+    fn test_condition_less_than() {
+        let sim = Simulation::new("test", "Test")
+            .with_initial_state(SimState::new().with_variable("score", Value::Int(30)))
+            .with_transition(
+                Transition::new(Trigger::UserClick {
+                    target: "check".into(),
+                })
+                .with_condition(Condition::LessThan {
+                    variable: "score".into(),
+                    value: 50.0,
+                })
+                .with_action(Action::AdvanceStep),
+            );
+
+        let mut instance = sim.instantiate();
+        let actions = instance.process_trigger(&Trigger::UserClick {
+            target: "check".into(),
+        });
+        assert_eq!(actions.len(), 1);
+    }
+
+    #[test]
+    fn test_condition_equals() {
+        let sim = Simulation::new("test", "Test")
+            .with_initial_state(
+                SimState::new().with_variable("state", Value::String("ready".into())),
+            )
+            .with_transition(
+                Transition::new(Trigger::UserClick {
+                    target: "go".into(),
+                })
+                .with_condition(Condition::Equals {
+                    variable: "state".into(),
+                    value: Value::String("ready".into()),
+                })
+                .with_action(Action::AdvanceStep),
+            );
+
+        let mut instance = sim.instantiate();
+        let actions = instance.process_trigger(&Trigger::UserClick {
+            target: "go".into(),
+        });
+        assert_eq!(actions.len(), 1);
+    }
+
+    #[test]
+    fn test_condition_not_satisfied() {
+        let sim = Simulation::new("test", "Test")
+            .with_initial_state(SimState::new().with_variable("score", Value::Int(30)))
+            .with_transition(
+                Transition::new(Trigger::UserClick {
+                    target: "check".into(),
+                })
+                .with_condition(Condition::GreaterThan {
+                    variable: "score".into(),
+                    value: 50.0,
+                })
+                .with_action(Action::AdvanceStep),
+            );
+
+        let mut instance = sim.instantiate();
+        let actions = instance.process_trigger(&Trigger::UserClick {
+            target: "check".into(),
+        });
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn test_move_entity_action() {
+        let sim = Simulation::new("test", "Test")
+            .with_initial_state(
+                SimState::new().with_entity(Entity::new("player").with_position(0.0, 0.0)),
+            )
+            .with_transition(
+                Transition::new(Trigger::UserClick {
+                    target: "move".into(),
+                })
+                .with_action(Action::MoveEntity {
+                    id: "player".into(),
+                    to: Position { x: 100.0, y: 50.0 },
+                }),
+            );
+
+        let mut instance = sim.instantiate();
+        instance.process_trigger(&Trigger::UserClick {
+            target: "move".into(),
+        });
+
+        let player = instance.state().get_entity("player").unwrap();
+        assert!((player.position.x - 100.0).abs() < f64::EPSILON);
+        assert!((player.position.y - 50.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
     fn test_value_conversions() {
         assert_eq!(Value::Bool(true).as_bool(), Some(true));
         assert_eq!(Value::Int(42).as_int(), Some(42));
         assert_eq!(Value::Float(3.5).as_float(), Some(3.5));
         assert_eq!(Value::Int(10).as_float(), Some(10.0));
+    }
+
+    #[test]
+    fn test_value_conversion_failures() {
+        assert!(Value::Int(42).as_bool().is_none());
+        assert!(Value::Bool(true).as_int().is_none());
+        assert!(Value::String("hello".into()).as_float().is_none());
+        assert!(Value::Float(1.5).as_int().is_none());
+        assert!(Value::Float(1.5).as_bool().is_none());
     }
 
     #[test]
@@ -533,5 +742,13 @@ mod tests {
 
         assert_eq!(instance.state().get_variable("x"), Some(&Value::Int(0)));
         assert_eq!(instance.step_count(), 0);
+    }
+
+    #[test]
+    fn test_sim_state_default() {
+        let state = SimState::default();
+        assert!(state.variables.is_empty());
+        assert!(state.entities.is_empty());
+        assert!((state.time).abs() < f64::EPSILON);
     }
 }

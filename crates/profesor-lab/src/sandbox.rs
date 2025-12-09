@@ -52,6 +52,20 @@ impl Sandbox {
         &self.config
     }
 
+    /// Set a custom timeout.
+    #[must_use]
+    pub fn with_timeout_ms(mut self, timeout_ms: u32) -> Self {
+        self.config.timeout_ms = timeout_ms;
+        self
+    }
+
+    /// Set a custom memory limit.
+    #[must_use]
+    pub fn with_memory_limit(mut self, bytes: usize) -> Self {
+        self.config.memory_limit_bytes = bytes;
+        self
+    }
+
     /// Execute code in the sandbox.
     ///
     /// Note: In the browser, this delegates to a WASM interpreter.
@@ -196,6 +210,13 @@ mod tests {
         let sandbox = Sandbox::new();
         assert_eq!(sandbox.config().timeout_ms, 5000);
         assert_eq!(sandbox.config().memory_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(sandbox.config().max_output_bytes, 1024 * 1024);
+    }
+
+    #[test]
+    fn test_sandbox_default() {
+        let sandbox = Sandbox::default();
+        assert_eq!(sandbox.config().timeout_ms, 5000);
     }
 
     #[test]
@@ -207,6 +228,60 @@ mod tests {
         };
         let sandbox = Sandbox::with_config(config);
         assert_eq!(sandbox.config().timeout_ms, 1000);
+        assert_eq!(sandbox.config().memory_limit_bytes, 32 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_sandbox_config_default() {
+        let config = SandboxConfig::default();
+        assert_eq!(config.timeout_ms, 5000);
+        assert_eq!(config.memory_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(config.max_output_bytes, 1024 * 1024);
+    }
+
+    #[test]
+    fn test_execute_rust() {
+        let sandbox = Sandbox::new();
+        let result = sandbox.execute("fn main() {}", Language::Rust, "");
+        assert!(result.is_success());
+    }
+
+    #[test]
+    fn test_execute_rust_empty() {
+        let sandbox = Sandbox::new();
+        let result = sandbox.execute("", Language::Rust, "");
+        assert!(!result.is_success());
+        assert_eq!(result.error_message(), Some("Empty code"));
+    }
+
+    #[test]
+    fn test_execute_python() {
+        let sandbox = Sandbox::new();
+        let result = sandbox.execute("print('hello')", Language::Python, "");
+        assert!(result.is_success());
+    }
+
+    #[test]
+    fn test_execute_python_empty() {
+        let sandbox = Sandbox::new();
+        let result = sandbox.execute("", Language::Python, "");
+        assert!(!result.is_success());
+        assert_eq!(result.error_message(), Some("Empty code"));
+    }
+
+    #[test]
+    fn test_execute_javascript() {
+        let sandbox = Sandbox::new();
+        let result = sandbox.execute("console.log('hello')", Language::JavaScript, "");
+        assert!(result.is_success());
+    }
+
+    #[test]
+    fn test_execute_javascript_empty() {
+        let sandbox = Sandbox::new();
+        let result = sandbox.execute("", Language::JavaScript, "");
+        assert!(!result.is_success());
+        assert_eq!(result.error_message(), Some("Empty code"));
     }
 
     #[test]
@@ -217,19 +292,55 @@ mod tests {
     }
 
     #[test]
-    fn test_execution_result_accessors() {
+    fn test_execution_result_success() {
         let success = ExecutionResult::Success {
             output: "Hello".into(),
             duration_ms: 10,
         };
         assert!(success.is_success());
         assert_eq!(success.output(), Some("Hello"));
+        assert!(success.error_message().is_none());
+    }
 
+    #[test]
+    fn test_execution_result_runtime_error() {
+        let error = ExecutionResult::RuntimeError {
+            error: "Divide by zero".into(),
+            line: Some(5),
+        };
+        assert!(!error.is_success());
+        assert!(error.output().is_none());
+        assert_eq!(error.error_message(), Some("Divide by zero"));
+    }
+
+    #[test]
+    fn test_execution_result_timeout() {
+        let timeout = ExecutionResult::Timeout {
+            partial_output: "partial".into(),
+        };
+        assert!(!timeout.is_success());
+        assert!(timeout.output().is_none());
+        assert!(timeout.error_message().is_none());
+    }
+
+    #[test]
+    fn test_execution_result_memory_exceeded() {
+        let mem_error = ExecutionResult::MemoryExceeded {
+            used_bytes: 100_000_000,
+        };
+        assert!(!mem_error.is_success());
+        assert!(mem_error.output().is_none());
+        assert!(mem_error.error_message().is_none());
+    }
+
+    #[test]
+    fn test_execution_result_error() {
         let error = ExecutionResult::Error {
             message: "Failed".into(),
         };
         assert!(!error.is_success());
         assert_eq!(error.error_message(), Some("Failed"));
+        assert!(error.output().is_none());
     }
 
     #[test]
@@ -237,5 +348,19 @@ mod tests {
         let sandbox = Sandbox::new();
         let result = sandbox.execute("SELECT 1", Language::Sql, "");
         assert!(!result.is_success());
+        assert!(result
+            .error_message()
+            .unwrap()
+            .contains("not yet supported"));
+    }
+
+    #[test]
+    fn test_unsupported_languages() {
+        let sandbox = Sandbox::new();
+
+        for lang in [Language::Sql, Language::TypeScript, Language::Markdown] {
+            let result = sandbox.execute("code", lang, "");
+            assert!(!result.is_success());
+        }
     }
 }

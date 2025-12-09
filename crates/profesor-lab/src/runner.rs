@@ -216,25 +216,80 @@ impl TestResults {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use profesor_core::{Lab, TestSuite};
+    use profesor_core::{Lab, Language, TestSuite};
 
-    #[allow(dead_code)] // Helper for future tests
     fn create_test_lab() -> Lab {
-        Lab::new("test-lab", "Test Lab").with_test_suite(
-            TestSuite::new()
-                .with_test(TestCase::new("test1").with_input("").with_expected("hello"))
-                .with_test(
-                    TestCase::new("test2")
-                        .with_input("world")
-                        .with_expected("hello world"),
-                ),
-        )
+        Lab::new("test-lab", "Test Lab")
+            .with_language(Language::Rust)
+            .with_test_suite(
+                TestSuite::new()
+                    .with_test(TestCase::new("test1").with_input("").with_expected("hello"))
+                    .with_test(
+                        TestCase::new("test2")
+                            .with_input("world")
+                            .with_expected("hello world"),
+                    ),
+            )
     }
 
     #[test]
     fn test_runner_creation() {
         let runner = TestRunner::new();
         assert!(runner.sandbox.config().timeout_ms > 0);
+    }
+
+    #[test]
+    fn test_runner_default() {
+        let runner = TestRunner::default();
+        assert!(runner.sandbox.config().timeout_ms > 0);
+    }
+
+    #[test]
+    fn test_runner_with_sandbox() {
+        let sandbox = Sandbox::new().with_timeout_ms(5000);
+        let runner = TestRunner::with_sandbox(sandbox);
+        assert_eq!(runner.sandbox.config().timeout_ms, 5000);
+    }
+
+    #[test]
+    fn test_run_tests_empty_lab() {
+        let runner = TestRunner::new();
+        let lab = Lab::new("empty", "Empty").with_language(Language::Rust);
+        let results = runner.run_tests("fn main() {}", &lab);
+        assert!(results.all_passed);
+        assert_eq!(results.total_count, 0);
+    }
+
+    #[test]
+    fn test_run_tests_with_tests() {
+        let runner = TestRunner::new();
+        let lab = create_test_lab();
+        let results = runner.run_tests("fn main() {}", &lab);
+        // In sandbox mode, this will return errors since we can't actually execute
+        assert_eq!(results.total_count, 2);
+    }
+
+    #[test]
+    fn test_result_is_failed() {
+        let passed = TestResult {
+            name: "test_pass".into(),
+            passed: true,
+            expected: "5".into(),
+            actual: "5".into(),
+            duration_ms: Some(10),
+            error: None,
+        };
+        assert!(!passed.is_failed());
+
+        let failed = TestResult {
+            name: "test_fail".into(),
+            passed: false,
+            expected: "3".into(),
+            actual: "4".into(),
+            duration_ms: None,
+            error: None,
+        };
+        assert!(failed.is_failed());
     }
 
     #[test]
@@ -248,8 +303,9 @@ mod tests {
             error: None,
         };
         assert!(passed.summary().contains("✓"));
+        assert!(passed.summary().contains("test_add"));
 
-        let failed = TestResult {
+        let failed_no_error = TestResult {
             name: "test_sub".into(),
             passed: false,
             expected: "3".into(),
@@ -257,7 +313,20 @@ mod tests {
             duration_ms: None,
             error: None,
         };
-        assert!(failed.summary().contains("✗"));
+        assert!(failed_no_error.summary().contains("✗"));
+        assert!(failed_no_error.summary().contains("expected '3'"));
+        assert!(failed_no_error.summary().contains("got '4'"));
+
+        let failed_with_error = TestResult {
+            name: "test_error".into(),
+            passed: false,
+            expected: "".into(),
+            actual: "".into(),
+            duration_ms: None,
+            error: Some("Runtime error".into()),
+        };
+        assert!(failed_with_error.summary().contains("✗"));
+        assert!(failed_with_error.summary().contains("Runtime error"));
     }
 
     #[test]
@@ -287,6 +356,17 @@ mod tests {
         };
 
         assert!((results.pass_rate() - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_results_pass_rate_empty() {
+        let results = TestResults {
+            results: alloc::vec![],
+            all_passed: true,
+            passed_count: 0,
+            total_count: 0,
+        };
+        assert!((results.pass_rate()).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -321,6 +401,20 @@ mod tests {
     }
 
     #[test]
+    fn test_results_summary() {
+        let results = TestResults {
+            results: alloc::vec![],
+            all_passed: false,
+            passed_count: 8,
+            total_count: 10,
+        };
+
+        let summary = results.summary();
+        assert!(summary.contains("8/10"));
+        assert!(summary.contains("80%"));
+    }
+
+    #[test]
     fn test_calculate_score() {
         let runner = TestRunner::new();
 
@@ -333,6 +427,21 @@ mod tests {
 
         let score = runner.calculate_score(&results, 100);
         assert_eq!(score, 80);
+    }
+
+    #[test]
+    fn test_calculate_score_full() {
+        let runner = TestRunner::new();
+
+        let results = TestResults {
+            results: alloc::vec![],
+            all_passed: true,
+            passed_count: 10,
+            total_count: 10,
+        };
+
+        let score = runner.calculate_score(&results, 100);
+        assert_eq!(score, 100);
     }
 
     #[test]

@@ -76,6 +76,16 @@ mod tests {
     }
 
     #[test]
+    fn test_is_wasm() {
+        // On native, is_wasm() returns false
+        // This is a compile-time check, not runtime
+        let _is_wasm = is_wasm();
+        // Just verify the function exists and can be called
+        #[cfg(not(target_arch = "wasm32"))]
+        assert!(!is_wasm());
+    }
+
+    #[test]
     fn test_core_types_accessible() {
         let course = Course::new("test", "Test Course");
         assert_eq!(course.id.as_str(), "test");
@@ -98,5 +108,17 @@ mod tests {
     fn test_physics_accessible() {
         let world = PhysicsWorld::new();
         assert_eq!(world.body_count(), 0);
+    }
+
+    #[test]
+    fn test_sandbox_accessible() {
+        let sandbox = Sandbox::new();
+        assert!(sandbox.config().timeout_ms > 0);
+    }
+
+    #[test]
+    fn test_simulation_accessible() {
+        let sim = Simulation::new("test", "Test Sim");
+        assert_eq!(sim.id.as_str(), "test");
     }
 }

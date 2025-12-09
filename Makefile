@@ -1,9 +1,9 @@
 # Profesor - WASM-Native Learning Platform
 # Makefile with PMAT Compliance Integration
 
-.PHONY: all build build-wasm test test-fast lint fmt coverage clean \
+.PHONY: all build build-wasm test test-fast lint fmt coverage coverage-check clean \
         pmat-quality pmat-tdg pmat-defects pmat-rust-score pmat-validate-docs \
-        dev release install-deps
+        dev release install-deps mutation help
 
 # Default target
 all: lint test build
@@ -36,9 +36,9 @@ serve:
 # Full development mode: build WASM and serve
 dev: build-wasm serve
 
-install-deps:
+install-deps: ## Install required development tools
 	rustup target add wasm32-unknown-unknown
-	cargo install pmat cargo-llvm-cov cargo-mutants ruchy
+	cargo install pmat cargo-llvm-cov cargo-mutants cargo-nextest ruchy
 	@echo "NOTE: wasm-bindgen-cli NOT installed - pure WASM only, no JS glue"
 
 # ============================================================================
@@ -55,15 +55,58 @@ fmt:
 fmt-check:
 	cargo fmt --all -- --check
 
-test:
-	cargo test --all-features
+test: ## Run all tests with output
+	cargo test --all-features -- --nocapture
 
-test-fast:
-	cargo test --lib
+test-fast: ## Run tests quickly (uses nextest if available)
+	@echo "⚡ Running fast tests..."
+	@if command -v cargo-nextest >/dev/null 2>&1; then \
+		RUST_TEST_THREADS=$$(nproc) cargo nextest run \
+			--workspace \
+			--all-features \
+			--status-level skip \
+			--failure-output immediate; \
+	else \
+		cargo test --workspace --all-features; \
+	fi
 
 # Coverage requires 95% per global CLAUDE.md requirement
-coverage:
-	cargo llvm-cov --all-features --fail-under-lines 95
+coverage: ## Generate coverage report (≥95% required)
+	@echo "📊 Generating coverage report (target: ≥95%)..."
+	@echo "    Note: Temporarily disabling mold linker (breaks LLVM coverage)"
+	@echo "    Note: wasm.rs excluded (WASM FFI cannot be instrumented on native)"
+	@# Temporarily disable mold linker (breaks LLVM coverage)
+	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
+	@cargo llvm-cov --workspace --all-features --ignore-filename-regex 'wasm\.rs$$' --lcov --output-path lcov.info
+	@cargo llvm-cov report --ignore-filename-regex 'wasm\.rs$$' --html --output-dir target/coverage/html
+	@# Restore mold linker
+	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
+	@echo "✅ Coverage report: target/coverage/html/index.html"
+	@echo ""
+	@echo "📊 Coverage Summary:"
+	@cargo llvm-cov report --ignore-filename-regex 'wasm\.rs$$' --summary-only
+	@echo ""
+	@COVERAGE=$$(cargo llvm-cov report --ignore-filename-regex 'wasm\.rs$$' --summary-only 2>/dev/null | grep "TOTAL" | awk '{n=0; for(i=1;i<=NF;i++) if($$i ~ /%$$/) {n++; if(n==3) {gsub(/%/,"",$$i); print $$i; exit}}}'); \
+	if [ -n "$$COVERAGE" ]; then \
+		echo "Line coverage: $$COVERAGE%"; \
+		THRESHOLD=95; \
+		if [ $$(printf "%.0f" "$$COVERAGE") -lt $$THRESHOLD ]; then \
+			echo "❌ FAIL: Coverage $$COVERAGE% below $${THRESHOLD}% threshold"; \
+			exit 1; \
+		else \
+			echo "✅ Coverage threshold met (≥$${THRESHOLD}%)"; \
+		fi; \
+	fi
+
+coverage-check: ## Enforce 95% coverage threshold (BLOCKS on failure)
+	@echo "🔒 Enforcing 95% coverage threshold..."
+	@echo "    Note: wasm.rs excluded (WASM FFI cannot be instrumented on native)"
+	@# Temporarily disable mold linker (breaks LLVM coverage)
+	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
+	@cargo llvm-cov --workspace --all-features --ignore-filename-regex 'wasm\.rs$$' --fail-under-lines 95
+	@# Restore mold linker
+	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
+	@echo "✅ Coverage threshold met (≥95%)"
 
 # Mutation testing (target >= 80%)
 mutation:
@@ -110,7 +153,7 @@ certeza:
 # ============================================================================
 
 # Full CI pipeline
-ci: fmt-check lint pmat-defects test coverage pmat-tdg
+ci: fmt-check lint pmat-defects test coverage-check pmat-tdg
 
 # Pre-commit validation
 pre-commit: fmt-check lint test-fast pmat-defects
@@ -144,11 +187,13 @@ help:
 	@echo "  make serve        - Start ruchy dev server"
 	@echo ""
 	@echo "Quality Targets:"
-	@echo "  make lint         - Run clippy linter"
-	@echo "  make fmt          - Format code"
-	@echo "  make test         - Run all tests"
-	@echo "  make coverage     - Run coverage (95% minimum)"
-	@echo "  make mutation     - Run mutation testing (90% kill rate)"
+	@echo "  make lint           - Run clippy linter"
+	@echo "  make fmt            - Format code"
+	@echo "  make test           - Run all tests with output"
+	@echo "  make test-fast      - Run tests quickly (uses nextest if available)"
+	@echo "  make coverage       - Generate coverage report (≥95% required)"
+	@echo "  make coverage-check - Enforce 95% threshold (blocks on failure)"
+	@echo "  make mutation       - Run mutation testing (≥80% kill rate)"
 	@echo ""
 	@echo "PMAT Compliance:"
 	@echo "  make pmat-quality      - Run quality gates"

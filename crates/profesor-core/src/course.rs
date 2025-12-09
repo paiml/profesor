@@ -268,8 +268,11 @@ pub enum LessonContent {
 }
 
 #[cfg(test)]
+#[allow(clippy::panic)]
 mod tests {
     use super::*;
+    use crate::lab::Language;
+    use crate::quiz::Quiz;
 
     #[test]
     fn test_course_creation() {
@@ -300,6 +303,16 @@ mod tests {
     }
 
     #[test]
+    fn test_course_total_quizzes() {
+        let course = Course::new("test", "Test")
+            .with_module(Module::new("mod-1", "Module 1").with_quiz(Quiz::new("q1", "Quiz 1")))
+            .with_module(Module::new("mod-2", "Module 2"))
+            .with_module(Module::new("mod-3", "Module 3").with_quiz(Quiz::new("q2", "Quiz 2")));
+
+        assert_eq!(course.total_quizzes(), 2);
+    }
+
+    #[test]
     fn test_module_duration() {
         let module = Module::new("mod-1", "Module 1")
             .with_lesson(Lesson::new("l1", "L1").with_duration(30))
@@ -309,15 +322,76 @@ mod tests {
     }
 
     #[test]
+    fn test_module_with_quiz() {
+        let module = Module::new("mod-1", "Module 1").with_quiz(Quiz::new("q1", "Quiz 1"));
+        assert!(module.quiz.is_some());
+        assert_eq!(module.quiz.as_ref().unwrap().id.as_str(), "q1");
+    }
+
+    #[test]
+    fn test_module_with_lab() {
+        let lab = crate::lab::Lab::new("lab-1", "Lab 1");
+        let module = Module::new("mod-1", "Module 1").with_lab(lab);
+        assert!(module.lab.is_some());
+        assert_eq!(module.lab.as_ref().unwrap().id.as_str(), "lab-1");
+    }
+
+    #[test]
+    fn test_module_with_unlock_criteria() {
+        let module = Module::new("mod-1", "Module 1").with_unlock_criteria(
+            UnlockCriteria::ModuleCompleted(crate::ids::ModuleId::new("mod-0")),
+        );
+        assert!(matches!(
+            module.unlock_criteria,
+            UnlockCriteria::ModuleCompleted(_)
+        ));
+    }
+
+    #[test]
     fn test_course_level_label() {
         assert_eq!(CourseLevel::Beginner.label(), "Beginner");
+        assert_eq!(CourseLevel::Intermediate.label(), "Intermediate");
+        assert_eq!(CourseLevel::Advanced.label(), "Advanced");
         assert_eq!(CourseLevel::Expert.label(), "Expert");
+    }
+
+    #[test]
+    fn test_course_level_default() {
+        let level = CourseLevel::default();
+        assert_eq!(level, CourseLevel::Beginner);
     }
 
     #[test]
     fn test_unlock_criteria_default() {
         let criteria = UnlockCriteria::default();
         assert_eq!(criteria, UnlockCriteria::None);
+    }
+
+    #[test]
+    fn test_unlock_criteria_quiz_score() {
+        let criteria = UnlockCriteria::QuizScore {
+            quiz_id: crate::ids::QuizId::new("q1"),
+            min_score: 0.8,
+        };
+        if let UnlockCriteria::QuizScore { quiz_id, min_score } = criteria {
+            assert_eq!(quiz_id.as_str(), "q1");
+            assert!((min_score - 0.8).abs() < f32::EPSILON);
+        } else {
+            panic!("Expected QuizScore variant");
+        }
+    }
+
+    #[test]
+    fn test_lesson_with_content() {
+        let lesson = Lesson::new("l1", "Lesson 1")
+            .with_content(LessonContent::Text("Hello world".into()))
+            .with_duration(15);
+        assert_eq!(lesson.duration_minutes, 15);
+        if let LessonContent::Text(text) = &lesson.content {
+            assert_eq!(text, "Hello world");
+        } else {
+            panic!("Expected Text content");
+        }
     }
 
     #[test]
@@ -330,6 +404,35 @@ mod tests {
             duration_seconds: 300,
         };
         assert!(matches!(video, LessonContent::Video { .. }));
+
+        let interactive_code = LessonContent::InteractiveCode {
+            code: "fn main() {}".into(),
+            language: Language::Rust,
+        };
+        if let LessonContent::InteractiveCode { code, language } = &interactive_code {
+            assert_eq!(code, "fn main() {}");
+            assert_eq!(*language, Language::Rust);
+        } else {
+            panic!("Expected InteractiveCode content");
+        }
+
+        let simulation = LessonContent::Simulation {
+            sim_id: crate::ids::SimulationId::new("sim-1"),
+        };
+        if let LessonContent::Simulation { sim_id } = &simulation {
+            assert_eq!(sim_id.as_str(), "sim-1");
+        } else {
+            panic!("Expected Simulation content");
+        }
+    }
+
+    #[test]
+    fn test_course_with_level_intermediate_advanced() {
+        let course_int = Course::new("test", "Test").with_level(CourseLevel::Intermediate);
+        assert_eq!(course_int.level, CourseLevel::Intermediate);
+
+        let course_adv = Course::new("test", "Test").with_level(CourseLevel::Advanced);
+        assert_eq!(course_adv.level, CourseLevel::Advanced);
     }
 }
 

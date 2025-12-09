@@ -322,6 +322,20 @@ mod tests {
     }
 
     #[test]
+    fn test_learner_id_from_string() {
+        let id: LearnerId = alloc::string::String::from("user-456").into();
+        assert_eq!(id.as_str(), "user-456");
+    }
+
+    #[test]
+    fn test_timestamp() {
+        let ts = Timestamp::from_millis(12345);
+        assert_eq!(ts.as_millis(), 12345);
+        assert_eq!(Timestamp::ZERO.as_millis(), 0);
+        assert_eq!(Timestamp::default().as_millis(), 0);
+    }
+
+    #[test]
     fn test_start_course() {
         let mut progress = LearnerProgress::new("user-1");
         let course_id = CourseId::new("rust-101");
@@ -331,6 +345,7 @@ mod tests {
 
         assert_eq!(progress.course_count(), 1);
         assert!(progress.course_progress(&course_id).is_some());
+        assert_eq!(progress.last_activity.as_millis(), 1000);
     }
 
     #[test]
@@ -345,6 +360,24 @@ mod tests {
     }
 
     #[test]
+    fn test_completed_courses() {
+        let mut progress = LearnerProgress::new("user-1");
+        let now = Timestamp::from_millis(1000);
+
+        progress.start_course(CourseId::new("course-1"), now);
+        progress.start_course(CourseId::new("course-2"), now);
+
+        assert_eq!(progress.completed_courses(), 0);
+
+        // Complete one course
+        if let Some(cp) = progress.courses.get_mut("course-1") {
+            cp.complete(now);
+        }
+
+        assert_eq!(progress.completed_courses(), 1);
+    }
+
+    #[test]
     fn test_course_progress_modules() {
         let mut cp = CourseProgress::new(CourseId::new("test"), Timestamp::from_millis(0));
 
@@ -353,6 +386,15 @@ mod tests {
         cp.complete_module(ModuleId::new("mod-1")); // Duplicate should be ignored
 
         assert_eq!(cp.modules_completed.len(), 2);
+    }
+
+    #[test]
+    fn test_set_current_module() {
+        let mut cp = CourseProgress::new(CourseId::new("test"), Timestamp::from_millis(0));
+        assert!(cp.current_module.is_none());
+
+        cp.set_current_module(ModuleId::new("mod-1"));
+        assert_eq!(cp.current_module.as_ref().unwrap().as_str(), "mod-1");
     }
 
     #[test]
@@ -373,11 +415,56 @@ mod tests {
     }
 
     #[test]
+    fn test_best_quiz_score_none() {
+        let cp = CourseProgress::new(CourseId::new("test"), Timestamp::from_millis(0));
+        let quiz_id = QuizId::new("nonexistent");
+        assert!(cp.best_quiz_score(&quiz_id).is_none());
+    }
+
+    #[test]
+    fn test_record_lab_completion() {
+        let mut cp = CourseProgress::new(CourseId::new("test"), Timestamp::from_millis(0));
+        let lab_id = LabId::new("lab-1");
+        let completion = LabCompletion::new(10, 10, 1800, Timestamp::from_millis(5000));
+
+        cp.record_lab_completion(&lab_id, completion);
+
+        assert!(cp.lab_completions.contains_key("lab-1"));
+        assert!(cp.lab_completions.get("lab-1").unwrap().all_tests_passed);
+    }
+
+    #[test]
+    fn test_course_progress_complete() {
+        let mut cp = CourseProgress::new(CourseId::new("test"), Timestamp::from_millis(0));
+        assert_eq!(cp.status, CourseStatus::InProgress);
+        assert!(cp.completed_at.is_none());
+
+        let now = Timestamp::from_millis(10000);
+        cp.complete(now);
+
+        assert_eq!(cp.status, CourseStatus::Completed);
+        assert_eq!(cp.completed_at.unwrap().as_millis(), 10000);
+    }
+
+    #[test]
     fn test_lab_completion() {
         let completion = LabCompletion::new(8, 10, 1800, Timestamp::from_millis(5000));
 
         assert!(!completion.all_tests_passed);
         assert!((completion.pass_rate() - 0.8).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_lab_completion_all_passed() {
+        let completion = LabCompletion::new(10, 10, 1800, Timestamp::from_millis(5000));
+        assert!(completion.all_tests_passed);
+        assert!((completion.pass_rate() - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_lab_completion_zero_tests() {
+        let completion = LabCompletion::new(0, 0, 100, Timestamp::from_millis(0));
+        assert!((completion.pass_rate()).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -391,11 +478,25 @@ mod tests {
     }
 
     #[test]
+    fn test_completion_percentage_zero_modules() {
+        let cp = CourseProgress::new(CourseId::new("test"), Timestamp::from_millis(0));
+        assert!((cp.completion_percentage(0)).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn test_course_status() {
         assert!(CourseStatus::InProgress.is_active());
         assert!(!CourseStatus::Completed.is_active());
         assert!(CourseStatus::Completed.is_finished());
         assert!(CourseStatus::Abandoned.is_finished());
+    }
+
+    #[test]
+    fn test_course_status_default() {
+        let status = CourseStatus::default();
+        assert_eq!(status, CourseStatus::NotStarted);
+        assert!(!status.is_active());
+        assert!(!status.is_finished());
     }
 }
 

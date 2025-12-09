@@ -347,6 +347,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_vec2_zero() {
+        assert_eq!(Vec2::ZERO, Vec2::new(0.0, 0.0));
+    }
+
+    #[test]
+    fn test_vec2_default() {
+        let v: Vec2 = Default::default();
+        assert_eq!(v, Vec2::ZERO);
+    }
+
+    #[test]
     fn test_vec2_operations() {
         let a = Vec2::new(3.0, 4.0);
         let b = Vec2::new(1.0, 2.0);
@@ -366,6 +377,13 @@ mod tests {
     }
 
     #[test]
+    fn test_vec2_normalize_zero() {
+        let v = Vec2::ZERO;
+        let n = v.normalize();
+        assert_eq!(n, Vec2::ZERO);
+    }
+
+    #[test]
     fn test_rigid_body_creation() {
         let body = RigidBody::new(10.0, 20.0)
             .with_mass(2.0)
@@ -374,6 +392,36 @@ mod tests {
         assert_eq!(body.position, Vec2::new(10.0, 20.0));
         assert_eq!(body.mass, 2.0);
         assert_eq!(body.restitution, 0.5);
+    }
+
+    #[test]
+    fn test_rigid_body_with_radius() {
+        let body = RigidBody::new(0.0, 0.0).with_radius(25.0);
+        assert_eq!(body.radius, 25.0);
+
+        // Minimum radius
+        let body_min = RigidBody::new(0.0, 0.0).with_radius(-10.0);
+        assert_eq!(body_min.radius, 0.1);
+    }
+
+    #[test]
+    fn test_rigid_body_mass_clamp() {
+        // Zero mass should be clamped to minimum
+        let body = RigidBody::new(0.0, 0.0).with_mass(0.0);
+        assert!(body.mass > 0.0);
+
+        // Negative mass should be clamped to minimum
+        let body_neg = RigidBody::new(0.0, 0.0).with_mass(-5.0);
+        assert!(body_neg.mass > 0.0);
+    }
+
+    #[test]
+    fn test_rigid_body_restitution_clamp() {
+        let body_low = RigidBody::new(0.0, 0.0).with_restitution(-0.5);
+        assert_eq!(body_low.restitution, 0.0);
+
+        let body_high = RigidBody::new(0.0, 0.0).with_restitution(1.5);
+        assert_eq!(body_high.restitution, 1.0);
     }
 
     #[test]
@@ -386,12 +434,28 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_impulse() {
+        let mut body = RigidBody::new(0.0, 0.0).with_mass(2.0);
+        body.apply_impulse(Vec2::new(10.0, 0.0));
+
+        // J = m * delta_v, so delta_v = J/m = 10/2 = 5
+        assert_eq!(body.velocity.x, 5.0);
+    }
+
+    #[test]
     fn test_kinetic_energy() {
         let mut body = RigidBody::new(0.0, 0.0).with_mass(2.0);
         body.velocity = Vec2::new(3.0, 4.0); // |v| = 5
 
         // KE = 0.5 * m * v^2 = 0.5 * 2 * 25 = 25
         assert!((body.kinetic_energy() - 25.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_physics_world_default() {
+        let world = PhysicsWorld::default();
+        assert_eq!(world.body_count(), 0);
+        assert_eq!(world.gravity, Vec2::new(0.0, 9.81));
     }
 
     #[test]
@@ -411,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bounds_collision() {
+    fn test_bounds_collision_left() {
         let mut world = PhysicsWorld::new()
             .with_gravity(Vec2::ZERO)
             .with_dt(0.1)
@@ -425,6 +489,111 @@ mod tests {
 
         // Body should have bounced off left wall
         assert!(world.bodies[0].velocity.x > 0.0);
+    }
+
+    #[test]
+    fn test_bounds_collision_right() {
+        let mut world = PhysicsWorld::new()
+            .with_gravity(Vec2::ZERO)
+            .with_dt(0.1)
+            .with_bounds(0.0, 0.0, 100.0, 100.0);
+
+        let mut body = RigidBody::new(95.0, 50.0).with_radius(10.0);
+        body.velocity = Vec2::new(100.0, 0.0);
+        world.add_body(body);
+
+        world.step();
+
+        // Body should have bounced off right wall
+        assert!(world.bodies[0].velocity.x < 0.0);
+    }
+
+    #[test]
+    fn test_bounds_collision_top() {
+        let mut world = PhysicsWorld::new()
+            .with_gravity(Vec2::ZERO)
+            .with_dt(0.1)
+            .with_bounds(0.0, 0.0, 100.0, 100.0);
+
+        let mut body = RigidBody::new(50.0, 5.0).with_radius(10.0);
+        body.velocity = Vec2::new(0.0, -100.0);
+        world.add_body(body);
+
+        world.step();
+
+        // Body should have bounced off top wall
+        assert!(world.bodies[0].velocity.y > 0.0);
+    }
+
+    #[test]
+    fn test_bounds_collision_bottom() {
+        let mut world = PhysicsWorld::new()
+            .with_gravity(Vec2::ZERO)
+            .with_dt(0.1)
+            .with_bounds(0.0, 0.0, 100.0, 100.0);
+
+        let mut body = RigidBody::new(50.0, 95.0).with_radius(10.0);
+        body.velocity = Vec2::new(0.0, 100.0);
+        world.add_body(body);
+
+        world.step();
+
+        // Body should have bounced off bottom wall
+        assert!(world.bodies[0].velocity.y < 0.0);
+    }
+
+    #[test]
+    fn test_body_body_collision() {
+        let mut world = PhysicsWorld::new().with_gravity(Vec2::ZERO).with_dt(0.01);
+
+        // Two bodies that will collide
+        let mut body1 = RigidBody::new(30.0, 50.0).with_radius(10.0).with_mass(1.0);
+        body1.velocity = Vec2::new(100.0, 0.0);
+
+        let mut body2 = RigidBody::new(70.0, 50.0).with_radius(10.0).with_mass(1.0);
+        body2.velocity = Vec2::new(-100.0, 0.0);
+
+        let initial_v1 = body1.velocity.x;
+        let initial_v2 = body2.velocity.x;
+
+        world.add_body(body1);
+        world.add_body(body2);
+
+        // Step until they're close enough to collide
+        for _ in 0..50 {
+            world.step();
+        }
+
+        // After collision, velocities should have changed
+        let final_v1 = world.bodies[0].velocity.x;
+        let final_v2 = world.bodies[1].velocity.x;
+
+        // Just verify something happened (collision was detected)
+        assert!(
+            (final_v1 - initial_v1).abs() > 1.0 || (final_v2 - initial_v2).abs() > 1.0,
+            "Velocities should have changed after collision"
+        );
+    }
+
+    #[test]
+    fn test_bodies_no_collision_when_far() {
+        let mut world = PhysicsWorld::new().with_gravity(Vec2::ZERO).with_dt(0.1);
+
+        // Two bodies far apart, moving parallel
+        let mut body1 = RigidBody::new(0.0, 0.0).with_radius(10.0).with_mass(1.0);
+        body1.velocity = Vec2::new(10.0, 0.0);
+
+        let mut body2 = RigidBody::new(0.0, 100.0).with_radius(10.0).with_mass(1.0);
+        body2.velocity = Vec2::new(10.0, 0.0);
+
+        world.add_body(body1);
+        world.add_body(body2);
+
+        world.step();
+
+        // Velocities should remain unchanged (parallel motion, no collision)
+        assert!((world.bodies[0].velocity.x - 10.0).abs() < 0.01);
+        assert!((world.bodies[1].velocity.x - 10.0).abs() < 0.01);
     }
 
     #[test]
@@ -442,6 +611,15 @@ mod tests {
 
         // KE = 0.5*1*4 + 0.5*1*9 = 2 + 4.5 = 6.5
         assert!((world.total_kinetic_energy() - 6.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dt_clamp() {
+        let world = PhysicsWorld::new().with_dt(0.0);
+        assert!(world.dt >= 0.001);
+
+        let world_neg = PhysicsWorld::new().with_dt(-1.0);
+        assert!(world_neg.dt >= 0.001);
     }
 }
 

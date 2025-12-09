@@ -431,6 +431,15 @@ mod tests {
     }
 
     #[test]
+    fn test_quiz_default() {
+        let quiz = Quiz::new("test", "Test");
+        assert!(quiz.questions.is_empty());
+        assert!((quiz.passing_score - 0.7).abs() < f32::EPSILON);
+        assert!(quiz.time_limit_secs.is_none());
+        assert!(quiz.max_attempts.is_none());
+    }
+
+    #[test]
     fn test_quiz_total_points() {
         let quiz = Quiz::new("test", "Test")
             .with_question(Question::MultipleChoice {
@@ -468,6 +477,133 @@ mod tests {
     }
 
     #[test]
+    fn test_question_id_accessor() {
+        let q = Question::MultipleChoice {
+            id: QuestionId::new("q1"),
+            prompt: "Test".into(),
+            options: vec![],
+            correct: 0,
+            explanation: "".into(),
+            points: 10,
+        };
+        assert_eq!(q.id().as_str(), "q1");
+    }
+
+    #[test]
+    fn test_question_prompt_accessor() {
+        let q = Question::MultipleChoice {
+            id: "q1".into(),
+            prompt: "What is 2+2?".into(),
+            options: vec![],
+            correct: 0,
+            explanation: "".into(),
+            points: 10,
+        };
+        assert_eq!(q.prompt(), "What is 2+2?");
+    }
+
+    #[test]
+    fn test_question_types_points() {
+        let multi_select = Question::MultipleSelect {
+            id: "q1".into(),
+            prompt: "Select all".into(),
+            options: vec!["A".into()],
+            correct: vec![0],
+            explanation: "".into(),
+            points: 5,
+        };
+        assert_eq!(multi_select.points(), 5);
+
+        let code_completion = Question::CodeCompletion {
+            id: "q2".into(),
+            prompt: "Fill blanks".into(),
+            code_template: "let x = ___".into(),
+            blanks: vec![],
+            test_cases: vec![],
+            points: 10,
+        };
+        assert_eq!(code_completion.points(), 10);
+
+        let ordering = Question::Ordering {
+            id: "q3".into(),
+            prompt: "Order these".into(),
+            items: vec!["A".into(), "B".into()],
+            correct_order: vec![0, 1],
+            explanation: "".into(),
+            points: 15,
+        };
+        assert_eq!(ordering.points(), 15);
+
+        let matching = Question::Matching {
+            id: "q4".into(),
+            prompt: "Match them".into(),
+            left: vec!["A".into()],
+            right: vec!["1".into()],
+            correct_pairs: vec![(0, 0)],
+            points: 20,
+        };
+        assert_eq!(matching.points(), 20);
+
+        let freeform = Question::FreeformCode {
+            id: "q5".into(),
+            prompt: "Write code".into(),
+            language: Language::Rust,
+            starter_code: "".into(),
+            test_cases: vec![],
+            hidden_test_cases: vec![],
+            points: 25,
+        };
+        assert_eq!(freeform.points(), 25);
+    }
+
+    #[test]
+    fn test_question_types_id() {
+        let multi_select = Question::MultipleSelect {
+            id: QuestionId::new("ms"),
+            prompt: "Select".into(),
+            options: vec![],
+            correct: vec![],
+            explanation: "".into(),
+            points: 5,
+        };
+        assert_eq!(multi_select.id().as_str(), "ms");
+
+        let ordering = Question::Ordering {
+            id: QuestionId::new("ord"),
+            prompt: "Order".into(),
+            items: vec![],
+            correct_order: vec![],
+            explanation: "".into(),
+            points: 5,
+        };
+        assert_eq!(ordering.id().as_str(), "ord");
+    }
+
+    #[test]
+    fn test_question_types_prompt() {
+        let multi_select = Question::MultipleSelect {
+            id: "q1".into(),
+            prompt: "Select prompt".into(),
+            options: vec![],
+            correct: vec![],
+            explanation: "".into(),
+            points: 5,
+        };
+        assert_eq!(multi_select.prompt(), "Select prompt");
+
+        let freeform = Question::FreeformCode {
+            id: "q2".into(),
+            prompt: "Code prompt".into(),
+            language: Language::Rust,
+            starter_code: "".into(),
+            test_cases: vec![],
+            hidden_test_cases: vec![],
+            points: 5,
+        };
+        assert_eq!(freeform.prompt(), "Code prompt");
+    }
+
+    #[test]
     fn test_blank_acceptable_answers() {
         let blank = Blank::new("blank1")
             .with_answer("a + b")
@@ -479,6 +615,25 @@ mod tests {
     }
 
     #[test]
+    fn test_blank_with_hint() {
+        let blank = Blank::new("b1").with_hint("Think about addition");
+        assert_eq!(blank.hint, Some("Think about addition".into()));
+    }
+
+    #[test]
+    fn test_test_case() {
+        let tc = TestCase::new("test_add")
+            .with_input("1 2")
+            .with_expected("3")
+            .with_timeout_ms(1000);
+
+        assert_eq!(tc.name, "test_add");
+        assert_eq!(tc.input, "1 2");
+        assert_eq!(tc.expected_output, "3");
+        assert_eq!(tc.timeout_ms, 1000);
+    }
+
+    #[test]
     fn test_score_calculation() {
         let score = Score::calculate(80, 100, 0.7, 8, 10);
 
@@ -486,6 +641,12 @@ mod tests {
         assert_eq!(score.points_possible, 100);
         assert!((score.percentage - 0.8).abs() < f32::EPSILON);
         assert!(score.passed);
+    }
+
+    #[test]
+    fn test_score_calculation_zero_possible() {
+        let score = Score::calculate(0, 0, 0.5, 0, 0);
+        assert!((score.percentage).abs() < f32::EPSILON);
     }
 
     #[test]

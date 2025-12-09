@@ -285,11 +285,21 @@ impl App {
 #[allow(clippy::expect_used)]
 mod tests {
     use super::*;
+    use profesor_core::{LearnerProgress, Question, QuestionId, Quiz};
 
     #[test]
     fn test_app_creation() {
         let app = App::new();
         assert_eq!(app.state().current_view, View::CourseList);
+    }
+
+    #[test]
+    fn test_app_state_default() {
+        let state = AppState::default();
+        assert_eq!(state.current_view, View::CourseList);
+        assert!(state.courses.is_empty());
+        assert!(state.progress.is_none());
+        assert!(state.active_quiz.is_none());
     }
 
     #[test]
@@ -302,6 +312,28 @@ mod tests {
     }
 
     #[test]
+    fn test_set_progress() {
+        let mut app = App::new();
+        let progress = LearnerProgress::new("learner-1");
+        app.state_mut().set_progress(progress);
+        assert!(app.state().progress.is_some());
+    }
+
+    #[test]
+    fn test_get_course() {
+        let mut app = App::new();
+        let courses = alloc::vec![Course::new("c1", "Course 1"), Course::new("c2", "Course 2"),];
+        app.state_mut().load_courses(courses);
+
+        let found = app.state().get_course(&CourseId::new("c1"));
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().title, "Course 1");
+
+        let not_found = app.state().get_course(&CourseId::new("nonexistent"));
+        assert!(not_found.is_none());
+    }
+
+    #[test]
     fn test_navigate() {
         let mut app = App::new();
         app.state_mut().navigate(View::Profile);
@@ -309,10 +341,121 @@ mod tests {
     }
 
     #[test]
+    fn test_start_quiz() {
+        let mut app = App::new();
+        let quiz = Quiz::new("test-quiz", "Test Quiz").with_question(Question::MultipleChoice {
+            id: QuestionId::new("q1"),
+            prompt: "Test?".into(),
+            options: alloc::vec!["A".into(), "B".into()],
+            correct: 0,
+            explanation: "A is correct".into(),
+            points: 10,
+        });
+
+        app.state_mut().start_quiz(quiz).expect("Should start quiz");
+        assert_eq!(app.state().current_view, View::Quiz);
+        assert!(app.state().active_quiz.is_some());
+        assert!(app.state().quiz_engine().is_some());
+    }
+
+    #[test]
+    fn test_quiz_engine_mut() {
+        let mut app = App::new();
+        let quiz = Quiz::new("test-quiz", "Test Quiz").with_question(Question::MultipleChoice {
+            id: QuestionId::new("q1"),
+            prompt: "Test?".into(),
+            options: alloc::vec!["A".into(), "B".into()],
+            correct: 0,
+            explanation: "A is correct".into(),
+            points: 10,
+        });
+
+        app.state_mut().start_quiz(quiz).expect("Should start quiz");
+        let engine = app.state_mut().quiz_engine_mut();
+        assert!(engine.is_some());
+    }
+
+    #[test]
+    fn test_select_existing_course() {
+        let mut app = App::new();
+        let courses = alloc::vec![Course::new("c1", "Course 1")];
+        app.state_mut().load_courses(courses);
+
+        let result = app.handle_event(AppEvent::SelectCourse(CourseId::new("c1")));
+        assert!(result.is_ok());
+        assert_eq!(app.state().current_view, View::CourseDetail);
+    }
+
+    #[test]
     fn test_select_nonexistent_course() {
         let mut app = App::new();
         let result = app.handle_event(AppEvent::SelectCourse(CourseId::new("nonexistent")));
         assert_eq!(result, Err(AppError::CourseNotFound));
+    }
+
+    #[test]
+    fn test_start_quiz_event() {
+        let mut app = App::new();
+        let result = app.handle_event(AppEvent::StartQuiz(profesor_core::QuizId::new("quiz1")));
+        assert!(result.is_ok());
+        assert_eq!(app.state().current_view, View::Quiz);
+    }
+
+    #[test]
+    fn test_submit_answer_no_quiz() {
+        let mut app = App::new();
+        let result = app.handle_event(AppEvent::SubmitAnswer(profesor_core::Answer::Choice(0)));
+        assert_eq!(result, Err(AppError::InvalidState));
+    }
+
+    #[test]
+    fn test_submit_answer_with_quiz() {
+        let mut app = App::new();
+        let quiz = Quiz::new("test-quiz", "Test Quiz").with_question(Question::MultipleChoice {
+            id: QuestionId::new("q1"),
+            prompt: "Test?".into(),
+            options: alloc::vec!["A".into(), "B".into()],
+            correct: 0,
+            explanation: "A is correct".into(),
+            points: 10,
+        });
+
+        app.state_mut().start_quiz(quiz).expect("Should start quiz");
+        let result = app.handle_event(AppEvent::SubmitAnswer(profesor_core::Answer::Choice(0)));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_previous_question_no_quiz() {
+        let mut app = App::new();
+        let result = app.handle_event(AppEvent::PreviousQuestion);
+        assert_eq!(result, Err(AppError::InvalidState));
+    }
+
+    #[test]
+    fn test_finish_quiz_no_quiz() {
+        let mut app = App::new();
+        let result = app.handle_event(AppEvent::FinishQuiz);
+        assert_eq!(result, Err(AppError::InvalidState));
+    }
+
+    #[test]
+    fn test_finish_quiz_with_quiz() {
+        let mut app = App::new();
+        let quiz = Quiz::new("test-quiz", "Test Quiz").with_question(Question::MultipleChoice {
+            id: QuestionId::new("q1"),
+            prompt: "Test?".into(),
+            options: alloc::vec!["A".into(), "B".into()],
+            correct: 0,
+            explanation: "A is correct".into(),
+            points: 10,
+        });
+
+        app.state_mut().start_quiz(quiz).expect("Should start quiz");
+        app.handle_event(AppEvent::SubmitAnswer(profesor_core::Answer::Choice(0)))
+            .expect("Should submit");
+        let result = app.handle_event(AppEvent::FinishQuiz);
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -336,5 +479,51 @@ mod tests {
         let mut app = App::new();
         let result = app.handle_event(AppEvent::NextQuestion);
         assert_eq!(result, Err(AppError::InvalidState));
+    }
+
+    #[test]
+    fn test_unhandled_events() {
+        let mut app = App::new();
+        // These events are handled by the catch-all pattern
+        let result = app.handle_event(AppEvent::SelectModule(profesor_core::ModuleId::new("m1")));
+        assert!(result.is_ok());
+        let result = app.handle_event(AppEvent::SelectLesson(profesor_core::LessonId::new("l1")));
+        assert!(result.is_ok());
+        let result = app.handle_event(AppEvent::StartLab(profesor_core::LabId::new("lab1")));
+        assert!(result.is_ok());
+        let result = app.handle_event(AppEvent::RunLabTests);
+        assert!(result.is_ok());
+        let result = app.handle_event(AppEvent::SubmitLab);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_app_error_display() {
+        assert_eq!(
+            alloc::format!("{}", AppError::CourseNotFound),
+            "Course not found"
+        );
+        assert_eq!(
+            alloc::format!("{}", AppError::ModuleNotFound),
+            "Module not found"
+        );
+        assert_eq!(
+            alloc::format!("{}", AppError::QuizError("test".into())),
+            "Quiz error: test"
+        );
+        assert_eq!(
+            alloc::format!("{}", AppError::LabError("test".into())),
+            "Lab error: test"
+        );
+        assert_eq!(
+            alloc::format!("{}", AppError::InvalidState),
+            "Invalid state for this operation"
+        );
+    }
+
+    #[test]
+    fn test_view_default() {
+        let view = View::default();
+        assert_eq!(view, View::CourseList);
     }
 }

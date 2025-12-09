@@ -534,6 +534,7 @@ pub extern "C" fn physics_body_count(handle: PhysicsHandle) -> u32 {
 // =============================================================================
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -541,6 +542,12 @@ mod tests {
     fn test_version() {
         let ptr = get_version();
         assert!(!ptr.is_null());
+    }
+
+    #[test]
+    fn test_is_wasm_build() {
+        // On native, should return 0
+        assert_eq!(is_wasm_build(), 0);
     }
 
     #[test]
@@ -555,6 +562,35 @@ mod tests {
         assert_eq!(app_get_view(handle), 7);
 
         app_destroy(handle);
+    }
+
+    #[test]
+    fn test_app_navigate_all_views() {
+        let handle = app_create();
+
+        // Test all valid view IDs
+        for view_id in 0..=7 {
+            app_navigate(handle, view_id);
+            assert_eq!(app_get_view(handle), view_id);
+        }
+
+        // Test invalid view ID (should be ignored)
+        app_navigate(handle, 7); // First set to valid
+        app_navigate(handle, 99); // Invalid - should be ignored
+        assert_eq!(app_get_view(handle), 7); // Should still be 7
+
+        app_destroy(handle);
+    }
+
+    #[test]
+    fn test_app_null_handle_navigate() {
+        // Should not panic
+        app_navigate(core::ptr::null_mut(), 0);
+    }
+
+    #[test]
+    fn test_app_null_handle_course_count() {
+        assert_eq!(app_course_count(core::ptr::null_mut()), 0);
     }
 
     #[test]
@@ -588,6 +624,79 @@ mod tests {
     }
 
     #[test]
+    fn test_quiz_incorrect_answer() {
+        let handle = quiz_create_sample();
+        quiz_start(handle);
+
+        // Submit incorrect answer (index 0 = "3")
+        let result = quiz_submit_choice(handle, 0);
+        assert_eq!(result, 0); // Incorrect
+
+        quiz_destroy(handle);
+    }
+
+    #[test]
+    fn test_quiz_progress() {
+        let handle = quiz_create_sample();
+
+        // Before start, progress is 0
+        assert_eq!(quiz_progress(handle), 0);
+
+        quiz_start(handle);
+        // After start but before answering, progress is 0
+        assert_eq!(quiz_progress(handle), 0);
+
+        // Answer first question
+        quiz_submit_choice(handle, 1);
+        // Progress should be 50% (1/2 questions)
+        assert_eq!(quiz_progress(handle), 50);
+
+        quiz_next(handle);
+        quiz_submit_choice(handle, 2);
+        // Progress should be 100%
+        assert_eq!(quiz_progress(handle), 100);
+
+        quiz_destroy(handle);
+    }
+
+    #[test]
+    fn test_quiz_null_handles() {
+        assert_eq!(quiz_start(core::ptr::null_mut()), -1);
+        assert_eq!(quiz_question_count(core::ptr::null_mut()), 0);
+        assert_eq!(quiz_submit_choice(core::ptr::null_mut(), 0), -1);
+        assert_eq!(quiz_next(core::ptr::null_mut()), -1);
+        assert_eq!(quiz_finish(core::ptr::null_mut()), -1);
+        assert_eq!(quiz_progress(core::ptr::null_mut()), 0);
+    }
+
+    #[test]
+    fn test_quiz_next_without_answer() {
+        let handle = quiz_create_sample();
+        quiz_start(handle);
+
+        // Try to move to next without answering
+        let result = quiz_next(handle);
+        assert_eq!(result, -1); // Should fail
+
+        quiz_destroy(handle);
+    }
+
+    #[test]
+    fn test_quiz_finish_early() {
+        let handle = quiz_create_sample();
+        quiz_start(handle);
+
+        // Answer only first question
+        quiz_submit_choice(handle, 1);
+
+        // Finish early (second question unanswered)
+        let score = quiz_finish(handle);
+        assert_eq!(score, 50); // 50% (1/2 correct, second unanswered = wrong)
+
+        quiz_destroy(handle);
+    }
+
+    #[test]
     fn test_physics_lifecycle() {
         let handle = physics_create();
         assert!(!handle.is_null());
@@ -611,10 +720,60 @@ mod tests {
     }
 
     #[test]
+    fn test_physics_multiple_bodies() {
+        let handle = physics_create();
+
+        let idx0 = physics_add_body(handle, 10.0, 20.0, 5.0);
+        let idx1 = physics_add_body(handle, 30.0, 40.0, 5.0);
+
+        assert_eq!(idx0, 0);
+        assert_eq!(idx1, 1);
+        assert_eq!(physics_body_count(handle), 2);
+
+        assert!((physics_body_x(handle, 0) - 10.0).abs() < f32::EPSILON);
+        assert!((physics_body_y(handle, 0) - 20.0).abs() < f32::EPSILON);
+        assert!((physics_body_x(handle, 1) - 30.0).abs() < f32::EPSILON);
+        assert!((physics_body_y(handle, 1) - 40.0).abs() < f32::EPSILON);
+
+        physics_destroy(handle);
+    }
+
+    #[test]
+    fn test_physics_invalid_body_index() {
+        let handle = physics_create();
+        physics_add_body(handle, 10.0, 20.0, 5.0);
+
+        // Invalid index should return 0.0
+        assert!((physics_body_x(handle, 99)).abs() < f32::EPSILON);
+        assert!((physics_body_y(handle, 99)).abs() < f32::EPSILON);
+
+        physics_destroy(handle);
+    }
+
+    #[test]
+    fn test_physics_null_handles() {
+        physics_set_bounds(core::ptr::null_mut(), 0.0, 0.0, 100.0, 100.0);
+        assert_eq!(
+            physics_add_body(core::ptr::null_mut(), 0.0, 0.0, 5.0),
+            u32::MAX
+        );
+        physics_step(core::ptr::null_mut());
+        assert!((physics_body_x(core::ptr::null_mut(), 0)).abs() < f32::EPSILON);
+        assert!((physics_body_y(core::ptr::null_mut(), 0)).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn test_memory_alloc_free() {
         let ptr = alloc_bytes(1024);
         assert!(!ptr.is_null());
         free_bytes(ptr, 1024);
+    }
+
+    #[test]
+    fn test_memory_free_null() {
+        // Should not panic
+        free_bytes(core::ptr::null_mut(), 0);
+        free_bytes(core::ptr::null_mut(), 100);
     }
 
     #[test]

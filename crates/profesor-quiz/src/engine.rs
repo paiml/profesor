@@ -327,6 +327,20 @@ mod tests {
     }
 
     #[test]
+    fn test_can_attempt_unlimited() {
+        let quiz = create_test_quiz();
+        let engine = QuizEngine::new(quiz);
+        assert!(engine.can_attempt());
+    }
+
+    #[test]
+    fn test_quiz_accessor() {
+        let quiz = create_test_quiz();
+        let engine = QuizEngine::new(quiz);
+        assert_eq!(engine.quiz().id.as_str(), "test-quiz");
+    }
+
+    #[test]
     fn test_start_quiz() {
         let quiz = create_test_quiz();
         let mut engine = QuizEngine::new(quiz);
@@ -337,6 +351,22 @@ mod tests {
         assert!(matches!(engine.state(), QuizState::InProgress { .. }));
         assert_eq!(engine.attempt_count(), 1);
         assert!(prompt.contains("2+2"));
+    }
+
+    #[test]
+    fn test_start_empty_quiz() {
+        let quiz = Quiz::new("empty", "Empty Quiz");
+        let mut engine = QuizEngine::new(quiz);
+        let result = engine.start();
+        assert_eq!(result, Err(QuizError::NoQuestions));
+    }
+
+    #[test]
+    fn test_current_question_not_started() {
+        let quiz = create_test_quiz();
+        let engine = QuizEngine::new(quiz);
+        let result = engine.current_question();
+        assert_eq!(result, Err(QuizError::InvalidState));
     }
 
     #[test]
@@ -368,6 +398,14 @@ mod tests {
     }
 
     #[test]
+    fn test_submit_answer_not_started() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+        let result = engine.submit_answer(Answer::Choice(0));
+        assert_eq!(result, Err(QuizError::InvalidState));
+    }
+
+    #[test]
     fn test_next_question() {
         let quiz = create_test_quiz();
         let mut engine = QuizEngine::new(quiz);
@@ -379,6 +417,68 @@ mod tests {
         let next = engine.next_question().expect("Should advance");
 
         assert!(next.prompt().contains("3+3"));
+    }
+
+    #[test]
+    fn test_next_question_not_answered() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+
+        engine.start().expect("Should start");
+        let result = engine.next_question();
+        assert_eq!(result, Err(QuizError::QuestionNotAnswered));
+    }
+
+    #[test]
+    fn test_next_question_at_end() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+
+        engine.start().expect("Should start");
+        engine.submit_answer(Answer::Choice(1)).expect("Submit");
+        engine.next_question().expect("Next");
+        engine.submit_answer(Answer::Choice(1)).expect("Submit");
+        let result = engine.next_question();
+        assert_eq!(result, Err(QuizError::NoMoreQuestions));
+    }
+
+    #[test]
+    fn test_next_question_not_started() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+        let result = engine.next_question();
+        assert_eq!(result, Err(QuizError::InvalidState));
+    }
+
+    #[test]
+    fn test_previous_question() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+
+        engine.start().expect("Should start");
+        engine.submit_answer(Answer::Choice(1)).expect("Submit");
+        engine.next_question().expect("Next");
+
+        let prev = engine.previous_question().expect("Should go back");
+        assert!(prev.prompt().contains("2+2"));
+    }
+
+    #[test]
+    fn test_previous_question_at_start() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+
+        engine.start().expect("Should start");
+        let result = engine.previous_question();
+        assert_eq!(result, Err(QuizError::NoPreviousQuestion));
+    }
+
+    #[test]
+    fn test_previous_question_not_started() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+        let result = engine.previous_question();
+        assert_eq!(result, Err(QuizError::InvalidState));
     }
 
     #[test]
@@ -398,6 +498,27 @@ mod tests {
         let score = engine.finish().expect("Should finish");
         assert!(score.passed);
         assert_eq!(score.correct_count, 2);
+    }
+
+    #[test]
+    fn test_finish_with_unanswered() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+
+        engine.start().expect("Should start");
+        engine.submit_answer(Answer::Choice(1)).expect("Submit");
+        // Don't answer second question
+
+        let score = engine.finish().expect("Should finish");
+        assert_eq!(score.correct_count, 1);
+    }
+
+    #[test]
+    fn test_finish_not_started() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+        let result = engine.finish();
+        assert_eq!(result, Err(QuizError::InvalidState));
     }
 
     #[test]
@@ -421,6 +542,7 @@ mod tests {
 
         let result = engine.start();
         assert_eq!(result, Err(QuizError::MaxAttemptsReached));
+        assert!(!engine.can_attempt());
     }
 
     #[test]
@@ -435,5 +557,47 @@ mod tests {
 
         engine.submit_answer(Answer::Choice(1)).expect("Submit");
         assert!((engine.progress() - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_progress_completed() {
+        let quiz = create_test_quiz();
+        let mut engine = QuizEngine::new(quiz);
+
+        engine.start().expect("Start");
+        engine.submit_answer(Answer::Choice(1)).expect("Submit");
+        engine.next_question().expect("Next");
+        engine.submit_answer(Answer::Choice(1)).expect("Submit");
+        engine.finish().expect("Finish");
+
+        assert!((engine.progress() - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_quiz_error_display() {
+        assert_eq!(
+            alloc::format!("{}", QuizError::MaxAttemptsReached),
+            "Maximum attempts reached"
+        );
+        assert_eq!(
+            alloc::format!("{}", QuizError::NoQuestions),
+            "Quiz has no questions"
+        );
+        assert_eq!(
+            alloc::format!("{}", QuizError::InvalidState),
+            "Invalid state for this operation"
+        );
+        assert_eq!(
+            alloc::format!("{}", QuizError::QuestionNotAnswered),
+            "Current question not answered"
+        );
+        assert_eq!(
+            alloc::format!("{}", QuizError::NoMoreQuestions),
+            "No more questions"
+        );
+        assert_eq!(
+            alloc::format!("{}", QuizError::NoPreviousQuestion),
+            "No previous question"
+        );
     }
 }
