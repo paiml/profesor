@@ -1,0 +1,23 @@
+# Clippy configuration
+# https://doc.rust-lang.org/clippy/configuration.html
+
+# MSRV for the project
+msrv = "1.75"
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 25
+
+# Maximum lines in a function
+too-many-lines-threshold = 150
+
+# Disallowed methods - prefer safer alternatives
+disallowed-methods = [
+    { path = "std::env::set_var", reason = "Not safe in multi-threaded context" },
+    { path = "std::env::remove_var", reason = "Not safe in multi-threaded context" },
+]
+
+# Disallowed types
+disallowed-types = []
+
+# Allow certain patterns that are common in WASM FFI
+allow-unwrap-in-tests = true

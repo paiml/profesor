@@ -507,7 +507,7 @@ mod tests {
     fn test_value_conversions() {
         assert_eq!(Value::Bool(true).as_bool(), Some(true));
         assert_eq!(Value::Int(42).as_int(), Some(42));
-        assert_eq!(Value::Float(3.14).as_float(), Some(3.14));
+        assert_eq!(Value::Float(3.5).as_float(), Some(3.5));
         assert_eq!(Value::Int(10).as_float(), Some(10.0));
     }
 

@@ -292,6 +292,7 @@ impl core::fmt::Display for QuizError {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
     use profesor_core::{Question, QuestionId, Quiz};

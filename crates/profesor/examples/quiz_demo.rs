@@ -4,6 +4,8 @@
 //!
 //! Run with: `cargo run --example quiz_demo`
 
+#![allow(clippy::expect_used)]
+
 use profesor::{Answer, Feedback, Question, QuestionId, Quiz, QuizEngine, QuizState};
 
 fn main() {

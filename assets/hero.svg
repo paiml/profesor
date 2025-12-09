@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b6b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wasmGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#654ff0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9b59b6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="url(#bgGrad)"/>
+
+  <!-- Grid pattern -->
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+    <line x1="0" y1="50" x2="800" y2="50"/>
+    <line x1="0" y1="100" x2="800" y2="100"/>
+    <line x1="0" y1="150" x2="800" y2="150"/>
+    <line x1="100" y1="0" x2="100" y2="200"/>
+    <line x1="200" y1="0" x2="200" y2="200"/>
+    <line x1="300" y1="0" x2="300" y2="200"/>
+    <line x1="400" y1="0" x2="400" y2="200"/>
+    <line x1="500" y1="0" x2="500" y2="200"/>
+    <line x1="600" y1="0" x2="600" y2="200"/>
+    <line x1="700" y1="0" x2="700" y2="200"/>
+  </g>
+
+  <!-- WASM cube icon -->
+  <g transform="translate(60, 60)">
+    <polygon points="40,0 80,20 80,60 40,80 0,60 0,20" fill="url(#wasmGrad)" opacity="0.9"/>
+    <polygon points="40,0 80,20 40,40 0,20" fill="#9b59b6" opacity="0.7"/>
+    <polygon points="80,20 80,60 40,80 40,40" fill="#654ff0" opacity="0.8"/>
+    <text x="40" y="48" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">WASM</text>
+  </g>
+
+  <!-- Title -->
+  <text x="180" y="85" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="bold">PROFESOR</text>
+
+  <!-- Subtitle -->
+  <text x="180" y="115" fill="#8892b0" font-family="system-ui, -apple-system, sans-serif" font-size="18">WASM-Native Learning Management System</text>
+
+  <!-- Accent line -->
+  <rect x="180" y="125" width="120" height="3" fill="url(#accentGrad)" rx="1.5"/>
+
+  <!-- Feature badges -->
+  <g transform="translate(180, 145)">
+    <!-- Pure WASM badge -->
+    <rect x="0" y="0" width="90" height="24" rx="12" fill="#654ff0" opacity="0.2"/>
+    <rect x="0" y="0" width="90" height="24" rx="12" stroke="#654ff0" stroke-width="1" fill="none"/>
+    <text x="45" y="16" text-anchor="middle" fill="#654ff0" font-family="monospace" font-size="11">Pure WASM</text>
+
+    <!-- Zero JS badge -->
+    <rect x="100" y="0" width="75" height="24" rx="12" fill="#e94560" opacity="0.2"/>
+    <rect x="100" y="0" width="75" height="24" rx="12" stroke="#e94560" stroke-width="1" fill="none"/>
+    <text x="137" y="16" text-anchor="middle" fill="#e94560" font-family="monospace" font-size="11">Zero JS</text>
+
+    <!-- 48KB badge -->
+    <rect x="185" y="0" width="60" height="24" rx="12" fill="#27ae60" opacity="0.2"/>
+    <rect x="185" y="0" width="60" height="24" rx="12" stroke="#27ae60" stroke-width="1" fill="none"/>
+    <text x="215" y="16" text-anchor="middle" fill="#27ae60" font-family="monospace" font-size="11">48KB</text>
+
+    <!-- Toyota Way badge -->
+    <rect x="255" y="0" width="95" height="24" rx="12" fill="#f39c12" opacity="0.2"/>
+    <rect x="255" y="0" width="95" height="24" rx="12" stroke="#f39c12" stroke-width="1" fill="none"/>
+    <text x="302" y="16" text-anchor="middle" fill="#f39c12" font-family="monospace" font-size="11">Toyota Way</text>
+  </g>
+
+  <!-- Architecture diagram (right side) -->
+  <g transform="translate(550, 40)">
+    <!-- Quiz box -->
+    <rect x="0" y="0" width="70" height="35" rx="4" fill="#e94560" opacity="0.8"/>
+    <text x="35" y="22" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="10">Quiz</text>
+
+    <!-- Lab box -->
+    <rect x="80" y="0" width="70" height="35" rx="4" fill="#27ae60" opacity="0.8"/>
+    <text x="115" y="22" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="10">Lab</text>
+
+    <!-- Sim box -->
+    <rect x="160" y="0" width="70" height="35" rx="4" fill="#3498db" opacity="0.8"/>
+    <text x="195" y="22" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="10">Sim</text>
+
+    <!-- Core box -->
+    <rect x="40" y="50" width="150" height="35" rx="4" fill="#654ff0" opacity="0.8"/>
+    <text x="115" y="72" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="10">profesor-core</text>
+
+    <!-- Connection lines -->
+    <line x1="35" y1="35" x2="65" y2="50" stroke="#8892b0" stroke-width="1" opacity="0.5"/>
+    <line x1="115" y1="35" x2="115" y2="50" stroke="#8892b0" stroke-width="1" opacity="0.5"/>
+    <line x1="195" y1="35" x2="165" y2="50" stroke="#8892b0" stroke-width="1" opacity="0.5"/>
+
+    <!-- WASM output -->
+    <rect x="60" y="100" width="110" height="30" rx="4" fill="url(#wasmGrad)" opacity="0.9"/>
+    <text x="115" y="120" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="10">.wasm bundle</text>
+
+    <!-- Arrow down -->
+    <polygon points="115,85 105,95 125,95" fill="#8892b0" opacity="0.7"/>
+  </g>
+</svg>
