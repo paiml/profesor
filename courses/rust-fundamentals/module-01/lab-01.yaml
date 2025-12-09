@@ -1,0 +1,179 @@
+# Lab: Your First Rust Program
+# Hands-on introduction to Rust basics
+
+id: lab-mod01
+title: "Lab: Your First Rust Program"
+description: "Build a simple command-line calculator that performs basic arithmetic operations."
+language: rust
+difficulty: beginner
+estimated_minutes: 45
+
+instructions:
+  - number: 1
+    title: "Create the add function"
+    description: |
+      Implement a function that adds two floating-point numbers.
+
+      ```rust
+      fn add(a: f64, b: f64) -> f64
+      ```
+
+      This function should return the sum of `a` and `b`.
+    validation:
+      type: function_exists
+      name: add
+
+  - number: 2
+    title: "Create the subtract function"
+    description: |
+      Implement a function that subtracts the second number from the first.
+
+      ```rust
+      fn subtract(a: f64, b: f64) -> f64
+      ```
+    validation:
+      type: tests_pass
+      test_names: ["test_subtract"]
+
+  - number: 3
+    title: "Create multiply and divide functions"
+    description: |
+      Implement multiplication and division:
+
+      ```rust
+      fn multiply(a: f64, b: f64) -> f64
+      fn divide(a: f64, b: f64) -> Option<f64>
+      ```
+
+      Note: `divide` should return `None` if dividing by zero!
+    validation:
+      type: tests_pass
+      test_names: ["test_multiply", "test_divide"]
+
+  - number: 4
+    title: "Create the calculator function"
+    description: |
+      Combine all operations in a calculator function:
+
+      ```rust
+      fn calculate(op: &str, a: f64, b: f64) -> Option<f64>
+      ```
+
+      - `"+"` should add
+      - `"-"` should subtract
+      - `"*"` should multiply
+      - `"/"` should divide (returning `None` for division by zero)
+      - Unknown operators should return `None`
+    validation:
+      type: tests_pass
+      test_names: ["test_calculator"]
+
+starter_files:
+  - path: "src/lib.rs"
+    content: |
+      //! Simple Calculator Lab
+      //!
+      //! Implement basic arithmetic operations.
+
+      /// Adds two numbers
+      pub fn add(a: f64, b: f64) -> f64 {
+          todo!("Implement add")
+      }
+
+      /// Subtracts b from a
+      pub fn subtract(a: f64, b: f64) -> f64 {
+          todo!("Implement subtract")
+      }
+
+      /// Multiplies two numbers
+      pub fn multiply(a: f64, b: f64) -> f64 {
+          todo!("Implement multiply")
+      }
+
+      /// Divides a by b, returning None if b is zero
+      pub fn divide(a: f64, b: f64) -> Option<f64> {
+          todo!("Implement divide")
+      }
+
+      /// Performs a calculation based on the operator
+      pub fn calculate(op: &str, a: f64, b: f64) -> Option<f64> {
+          todo!("Implement calculate")
+      }
+
+      #[cfg(test)]
+      mod tests {
+          use super::*;
+
+          #[test]
+          fn test_add() {
+              assert_eq!(add(2.0, 3.0), 5.0);
+              assert_eq!(add(-1.0, 1.0), 0.0);
+              assert_eq!(add(0.0, 0.0), 0.0);
+          }
+
+          #[test]
+          fn test_subtract() {
+              assert_eq!(subtract(5.0, 3.0), 2.0);
+              assert_eq!(subtract(1.0, 1.0), 0.0);
+              assert_eq!(subtract(0.0, 5.0), -5.0);
+          }
+
+          #[test]
+          fn test_multiply() {
+              assert_eq!(multiply(2.0, 3.0), 6.0);
+              assert_eq!(multiply(-2.0, 3.0), -6.0);
+              assert_eq!(multiply(0.0, 100.0), 0.0);
+          }
+
+          #[test]
+          fn test_divide() {
+              assert_eq!(divide(6.0, 2.0), Some(3.0));
+              assert_eq!(divide(5.0, 2.0), Some(2.5));
+              assert_eq!(divide(1.0, 0.0), None);
+              assert_eq!(divide(0.0, 5.0), Some(0.0));
+          }
+
+          #[test]
+          fn test_calculator() {
+              assert_eq!(calculate("+", 2.0, 3.0), Some(5.0));
+              assert_eq!(calculate("-", 5.0, 3.0), Some(2.0));
+              assert_eq!(calculate("*", 4.0, 3.0), Some(12.0));
+              assert_eq!(calculate("/", 10.0, 2.0), Some(5.0));
+              assert_eq!(calculate("/", 1.0, 0.0), None);
+              assert_eq!(calculate("?", 1.0, 1.0), None);
+          }
+      }
+    readonly: false
+
+test_suite:
+  tests:
+    - name: test_add
+      code: |
+        assert_eq!(add(2.0, 3.0), 5.0);
+        assert_eq!(add(-1.0, 1.0), 0.0);
+    - name: test_subtract
+      code: |
+        assert_eq!(subtract(5.0, 3.0), 2.0);
+    - name: test_multiply
+      code: |
+        assert_eq!(multiply(2.0, 3.0), 6.0);
+    - name: test_divide
+      code: |
+        assert_eq!(divide(6.0, 2.0), Some(3.0));
+        assert_eq!(divide(1.0, 0.0), None);
+    - name: test_calculator
+      code: |
+        assert_eq!(calculate("+", 2.0, 3.0), Some(5.0));
+        assert_eq!(calculate("-", 5.0, 3.0), Some(2.0));
+        assert_eq!(calculate("*", 4.0, 3.0), Some(12.0));
+        assert_eq!(calculate("/", 10.0, 2.0), Some(5.0));
+        assert_eq!(calculate("/", 1.0, 0.0), None);
+        assert_eq!(calculate("?", 1.0, 1.0), None);
+
+hints:
+  - step: 1
+    text: "Remember that f64 supports the + operator directly"
+  - step: 3
+    text: "Use an if statement or match to check if b is zero before dividing"
+  - step: 4
+    text: "Use match to handle different operation strings"

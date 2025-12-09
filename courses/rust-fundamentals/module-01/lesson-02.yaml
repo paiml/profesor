@@ -1,0 +1,79 @@
+# Lesson 1.2: Data Types
+# Basic Rust data types
+
+id: lesson-01-02
+title: "Data Types"
+duration_minutes: 25
+
+content:
+  type: text
+  body: |
+    # Rust Data Types
+
+    Rust is a statically typed language, meaning the compiler must know the types of all
+    variables at compile time. Let's explore the basic types.
+
+    ## Scalar Types
+
+    ### Integers
+
+    | Length  | Signed  | Unsigned |
+    |---------|---------|----------|
+    | 8-bit   | i8      | u8       |
+    | 16-bit  | i16     | u16      |
+    | 32-bit  | i32     | u32      |
+    | 64-bit  | i64     | u64      |
+    | 128-bit | i128    | u128     |
+    | arch    | isize   | usize    |
+
+    ```rust
+    let a: i32 = 42;
+    let b: u64 = 100_000;  // underscores for readability
+    ```
+
+    ### Floating-Point
+
+    ```rust
+    let x: f32 = 3.14;
+    let y: f64 = 2.71828;  // default type
+    ```
+
+    ### Boolean
+
+    ```rust
+    let t: bool = true;
+    let f = false;  // type inferred
+    ```
+
+    ### Character
+
+    ```rust
+    let c: char = 'z';
+    let heart = '❤';  // Unicode support!
+    ```
+
+    ## Compound Types
+
+    ### Tuples
+
+    ```rust
+    let tup: (i32, f64, char) = (500, 6.4, 'y');
+    let (x, y, z) = tup;  // destructuring
+    let five_hundred = tup.0;  // index access
+    ```
+
+    ### Arrays
+
+    ```rust
+    let arr: [i32; 5] = [1, 2, 3, 4, 5];
+    let first = arr[0];
+    let zeros = [0; 10];  // 10 zeros
+    ```
+
+    ## Type Inference
+
+    Rust can often infer types, but explicit annotations improve clarity:
+
+    ```rust
+    let guess: u32 = "42".parse().expect("Not a number!");
+    ```

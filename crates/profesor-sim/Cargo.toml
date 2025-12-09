@@ -1,0 +1,25 @@
+[package]
+name = "profesor-sim"
+description = "Simulations for Profesor LMS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+profesor-core = { workspace = true }
+serde = { workspace = true }
+libm = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["std"]
+std = ["profesor-core/std", "serde/std"]

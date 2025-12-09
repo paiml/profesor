@@ -1,0 +1,48 @@
+# O(1) Quality Gate Metric Thresholds
+# Profesor Learning Platform
+# Pattern: Toyota Way - Jidoka (MEAN mode: warnings = errors)
+
+[thresholds]
+# Hard limits (block commits)
+lint_max_ms = 60_000              # 1min (reasonable for new project)
+test_fast_max_ms = 180_000        # 3min (fast test suite)
+coverage_max_ms = 300_000         # 5min (coverage analysis)
+binary_max_bytes = 2_097_152      # 2 MB (WASM bundle limit per spec)
+deps_default_max = 500            # Conservative for WASM target
+
+# WASM-specific thresholds
+wasm_build_max_ms = 120_000       # 2min WASM compilation
+wasm_size_max_bytes = 2_097_152   # 2 MB bundle size
+
+[staleness]
+# Metrics older than this trigger warnings
+max_age_days = 7
+
+[enforcement]
+# Pre-commit behavior (MEAN mode = strict)
+fail_on_stale_metrics = false     # Warn, don't block
+fail_on_missing_metrics = false   # Allow commits if no cache
+fail_on_threshold_violation = true # Block commits on violations
+
+[trend_analysis]
+# Track metrics for Kaizen (continuous improvement)
+enabled = true
+retention_days = 90
+alert_on_regression = true
+regression_threshold_pct = 10.0   # Alert if >10% slower
+
+# Quality gates (aligned with global CLAUDE.md requirements)
+[quality_gates]
+min_coverage_pct = 95.0           # Per global CLAUDE.md requirement
+min_mutation_score_pct = 80.0     # Target: >=80% mutation score
+max_cyclomatic_complexity = 15    # Target: <=15 per function
+min_tdg_grade = "A-"              # Target: A- or better (>=88)
+max_unwrap_calls = 0              # Zero tolerance (Cloudflare lesson)
+
+# Performance budgets (per spec Section 10)
+[performance]
+# Quiz interaction targets
+max_quiz_render_ms = 16           # 60fps interaction
+max_code_execution_ms = 5000      # Acceptable wait time
+max_memory_usage_mb = 64          # Mobile-friendly
+max_time_to_interactive_ms = 3000 # User engagement

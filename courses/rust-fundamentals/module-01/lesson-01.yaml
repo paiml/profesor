@@ -1,0 +1,60 @@
+# Lesson 1.1: Hello Rust
+# Introduction to Rust programming
+
+id: lesson-01-01
+title: "Hello, Rust!"
+duration_minutes: 20
+
+content:
+  type: text
+  body: |
+    # Welcome to Rust
+
+    Rust is a systems programming language focused on safety, speed, and concurrency.
+    It accomplishes these goals without a garbage collector, making it useful for
+    performance-critical services and embedded systems.
+
+    ## Your First Rust Program
+
+    Every Rust program starts with a `main` function:
+
+    ```rust
+    fn main() {
+        println!("Hello, world!");
+    }
+    ```
+
+    Let's break this down:
+
+    - `fn` declares a new function
+    - `main` is the entry point of every Rust program
+    - `println!` is a macro (note the `!`) that prints to the console
+    - Statements end with semicolons `;`
+
+    ## Variables
+
+    In Rust, variables are immutable by default:
+
+    ```rust
+    let x = 5;      // immutable
+    let mut y = 10; // mutable (can be changed)
+
+    // x = 6;       // Error! Cannot assign twice to immutable variable
+    y = 20;         // OK, y is mutable
+    ```
+
+    ## Why Rust?
+
+    1. **Memory Safety**: No null pointers, no dangling pointers
+    2. **Zero-Cost Abstractions**: High-level features with no runtime overhead
+    3. **Fearless Concurrency**: The type system prevents data races
+
+    ## Key Concepts to Learn
+
+    - Ownership and Borrowing
+    - Structs and Enums
+    - Pattern Matching
+    - Error Handling with Result
+    - Traits (similar to interfaces)
+
+    Ready to begin? Let's write some Rust!

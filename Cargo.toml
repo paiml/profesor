@@ -1,0 +1,56 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/profesor-core",
+    "crates/profesor-quiz",
+    "crates/profesor-lab",
+    "crates/profesor-sim",
+    "crates/profesor",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/paiml/profesor"
+authors = ["PAIML Team"]
+
+[workspace.dependencies]
+# Internal crates
+profesor-core = { path = "crates/profesor-core" }
+profesor-quiz = { path = "crates/profesor-quiz" }
+profesor-lab = { path = "crates/profesor-lab" }
+profesor-sim = { path = "crates/profesor-sim" }
+
+# Serialization (WASM-compatible)
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+serde_yaml = { version = "0.9", default-features = false }
+
+# Math for no_std (WASM-compatible)
+libm = "0.2"
+
+# Testing
+proptest = "1.4"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.release.package."*"]
+opt-level = "z"

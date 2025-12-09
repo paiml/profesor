@@ -1,0 +1,41 @@
+# Rust Fundamentals Course
+# PAIML Profesor - WASM-native LMS
+
+id: rust-fundamentals
+title: "Rust Fundamentals"
+description: "Learn Rust from scratch with hands-on exercises. Master ownership, borrowing, and systems programming concepts through interactive labs and quizzes."
+level: beginner
+estimated_hours: 40
+prerequisites: []
+
+modules:
+  - id: mod-01-basics
+    title: "Module 1: Rust Basics"
+    unlock_criteria:
+      type: none  # First module is always unlocked
+    lessons:
+      - file: module-01/lesson-01.yaml
+      - file: module-01/lesson-02.yaml
+    quiz: module-01/quiz-01.yaml
+    lab: module-01/lab-01.yaml
+
+  - id: mod-02-ownership
+    title: "Module 2: Ownership & Borrowing"
+    unlock_criteria:
+      type: module_completed
+      module: mod-01-basics
+    lessons:
+      - file: module-02/lesson-01.yaml
+      - file: module-02/lesson-02.yaml
+    quiz: module-02/quiz-01.yaml
+    lab: module-02/lab-01.yaml
+
+  - id: mod-03-structs
+    title: "Module 3: Structs and Enums"
+    unlock_criteria:
+      type: module_completed
+      module: mod-02-ownership
+    lessons:
+      - file: module-03/lesson-01.yaml
+    quiz: module-03/quiz-01.yaml
+    lab: module-03/lab-01.yaml

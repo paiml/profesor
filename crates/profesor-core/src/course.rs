@@ -1,0 +1,377 @@
+//! Course structure types.
+//!
+//! Defines the hierarchical structure of courses: Course → Module → Lesson.
+
+use alloc::string::String;
+use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
+
+use crate::ids::{CourseId, LessonId, ModuleId, SimulationId};
+use crate::lab::Lab;
+use crate::quiz::Quiz;
+
+/// A complete course (e.g., "Rust Fundamentals").
+///
+/// Courses are the top-level container for learning content, consisting
+/// of multiple modules that are completed sequentially.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Course {
+    /// Unique identifier for this course
+    pub id: CourseId,
+    /// Human-readable title
+    pub title: String,
+    /// Course description
+    pub description: String,
+    /// Difficulty level
+    pub level: CourseLevel,
+    /// Ordered list of modules
+    pub modules: Vec<Module>,
+    /// Courses that must be completed before this one
+    pub prerequisites: Vec<CourseId>,
+    /// Estimated time to complete in hours
+    pub estimated_hours: u32,
+}
+
+impl Course {
+    /// Create a new course with required fields.
+    #[must_use]
+    pub fn new(id: impl Into<CourseId>, title: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            description: String::new(),
+            level: CourseLevel::Beginner,
+            modules: Vec::new(),
+            prerequisites: Vec::new(),
+            estimated_hours: 0,
+        }
+    }
+
+    /// Set the course description.
+    #[must_use]
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = description.into();
+        self
+    }
+
+    /// Set the course level.
+    #[must_use]
+    pub fn with_level(mut self, level: CourseLevel) -> Self {
+        self.level = level;
+        self
+    }
+
+    /// Add a module to the course.
+    #[must_use]
+    pub fn with_module(mut self, module: Module) -> Self {
+        self.modules.push(module);
+        self
+    }
+
+    /// Set the estimated hours.
+    #[must_use]
+    pub fn with_estimated_hours(mut self, hours: u32) -> Self {
+        self.estimated_hours = hours;
+        self
+    }
+
+    /// Get the total number of lessons in the course.
+    #[must_use]
+    pub fn total_lessons(&self) -> usize {
+        self.modules.iter().map(|m| m.lessons.len()).sum()
+    }
+
+    /// Get the total number of quizzes in the course.
+    #[must_use]
+    pub fn total_quizzes(&self) -> usize {
+        self.modules.iter().filter(|m| m.quiz.is_some()).count()
+    }
+}
+
+/// Course difficulty level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum CourseLevel {
+    /// For beginners with no prior experience
+    #[default]
+    Beginner,
+    /// For those with some background knowledge
+    Intermediate,
+    /// For experienced practitioners
+    Advanced,
+    /// For domain experts seeking deep knowledge
+    Expert,
+}
+
+impl CourseLevel {
+    /// Get a human-readable label for the level.
+    #[must_use]
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Beginner => "Beginner",
+            Self::Intermediate => "Intermediate",
+            Self::Advanced => "Advanced",
+            Self::Expert => "Expert",
+        }
+    }
+}
+
+/// A module within a course (e.g., "Week 1: Ownership").
+///
+/// Modules are designed to be ~2-4 hours each for consistent pacing
+/// (Heijunka principle from Toyota Way).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Module {
+    /// Unique identifier for this module
+    pub id: ModuleId,
+    /// Human-readable title
+    pub title: String,
+    /// Ordered list of lessons
+    pub lessons: Vec<Lesson>,
+    /// Optional quiz for this module
+    pub quiz: Option<Quiz>,
+    /// Optional hands-on lab
+    pub lab: Option<Lab>,
+    /// Criteria to unlock this module
+    pub unlock_criteria: UnlockCriteria,
+}
+
+impl Module {
+    /// Create a new module with required fields.
+    #[must_use]
+    pub fn new(id: impl Into<ModuleId>, title: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            lessons: Vec::new(),
+            quiz: None,
+            lab: None,
+            unlock_criteria: UnlockCriteria::None,
+        }
+    }
+
+    /// Add a lesson to this module.
+    #[must_use]
+    pub fn with_lesson(mut self, lesson: Lesson) -> Self {
+        self.lessons.push(lesson);
+        self
+    }
+
+    /// Set the quiz for this module.
+    #[must_use]
+    pub fn with_quiz(mut self, quiz: Quiz) -> Self {
+        self.quiz = Some(quiz);
+        self
+    }
+
+    /// Set the lab for this module.
+    #[must_use]
+    pub fn with_lab(mut self, lab: Lab) -> Self {
+        self.lab = Some(lab);
+        self
+    }
+
+    /// Set the unlock criteria.
+    #[must_use]
+    pub fn with_unlock_criteria(mut self, criteria: UnlockCriteria) -> Self {
+        self.unlock_criteria = criteria;
+        self
+    }
+
+    /// Get the total duration of all lessons in minutes.
+    #[must_use]
+    pub fn total_duration_minutes(&self) -> u32 {
+        self.lessons.iter().map(|l| l.duration_minutes).sum()
+    }
+}
+
+/// Criteria for unlocking a module.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub enum UnlockCriteria {
+    /// No requirements (first module)
+    #[default]
+    None,
+    /// Must complete a specific module
+    ModuleCompleted(ModuleId),
+    /// Must achieve a minimum score on a quiz
+    QuizScore {
+        /// The quiz that must be completed
+        quiz_id: crate::ids::QuizId,
+        /// Minimum score (0.0 - 1.0)
+        min_score: f32,
+    },
+}
+
+/// A single lesson within a module.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Lesson {
+    /// Unique identifier for this lesson
+    pub id: LessonId,
+    /// Human-readable title
+    pub title: String,
+    /// The lesson content
+    pub content: LessonContent,
+    /// Estimated duration in minutes
+    pub duration_minutes: u32,
+}
+
+impl Lesson {
+    /// Create a new lesson with required fields.
+    #[must_use]
+    pub fn new(id: impl Into<LessonId>, title: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            content: LessonContent::Text(String::new()),
+            duration_minutes: 0,
+        }
+    }
+
+    /// Set the lesson content.
+    #[must_use]
+    pub fn with_content(mut self, content: LessonContent) -> Self {
+        self.content = content;
+        self
+    }
+
+    /// Set the duration.
+    #[must_use]
+    pub fn with_duration(mut self, minutes: u32) -> Self {
+        self.duration_minutes = minutes;
+        self
+    }
+}
+
+/// Types of lesson content.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum LessonContent {
+    /// Markdown text content
+    Text(String),
+    /// Interactive code example
+    InteractiveCode {
+        /// The code to display
+        code: String,
+        /// Programming language
+        language: crate::lab::Language,
+    },
+    /// Embedded simulation
+    Simulation {
+        /// ID of the simulation to embed
+        sim_id: SimulationId,
+    },
+    /// Video reference (external URL)
+    Video {
+        /// URL of the video
+        url: String,
+        /// Duration in seconds
+        duration_seconds: u32,
+    },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_course_creation() {
+        let course = Course::new("rust-101", "Rust Fundamentals")
+            .with_description("Learn Rust from scratch")
+            .with_level(CourseLevel::Beginner)
+            .with_estimated_hours(40);
+
+        assert_eq!(course.id.as_str(), "rust-101");
+        assert_eq!(course.title, "Rust Fundamentals");
+        assert_eq!(course.level, CourseLevel::Beginner);
+        assert_eq!(course.estimated_hours, 40);
+    }
+
+    #[test]
+    fn test_course_total_lessons() {
+        let course = Course::new("test", "Test")
+            .with_module(
+                Module::new("mod-1", "Module 1")
+                    .with_lesson(Lesson::new("l1", "Lesson 1"))
+                    .with_lesson(Lesson::new("l2", "Lesson 2")),
+            )
+            .with_module(
+                Module::new("mod-2", "Module 2").with_lesson(Lesson::new("l3", "Lesson 3")),
+            );
+
+        assert_eq!(course.total_lessons(), 3);
+    }
+
+    #[test]
+    fn test_module_duration() {
+        let module = Module::new("mod-1", "Module 1")
+            .with_lesson(Lesson::new("l1", "L1").with_duration(30))
+            .with_lesson(Lesson::new("l2", "L2").with_duration(45));
+
+        assert_eq!(module.total_duration_minutes(), 75);
+    }
+
+    #[test]
+    fn test_course_level_label() {
+        assert_eq!(CourseLevel::Beginner.label(), "Beginner");
+        assert_eq!(CourseLevel::Expert.label(), "Expert");
+    }
+
+    #[test]
+    fn test_unlock_criteria_default() {
+        let criteria = UnlockCriteria::default();
+        assert_eq!(criteria, UnlockCriteria::None);
+    }
+
+    #[test]
+    fn test_lesson_content_types() {
+        let text = LessonContent::Text("Hello".into());
+        assert!(matches!(text, LessonContent::Text(_)));
+
+        let video = LessonContent::Video {
+            url: "https://example.com".into(),
+            duration_seconds: 300,
+        };
+        assert!(matches!(video, LessonContent::Video { .. }));
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_course_lessons_count_matches_modules(
+            num_modules in 1usize..10,
+            lessons_per_module in 1usize..5
+        ) {
+            let mut course = Course::new("test", "Test");
+            for i in 0..num_modules {
+                let mut module = Module::new(format!("mod-{}", i), format!("Module {}", i));
+                for j in 0..lessons_per_module {
+                    module = module.with_lesson(
+                        Lesson::new(format!("l-{}-{}", i, j), format!("Lesson {}-{}", i, j))
+                    );
+                }
+                course = course.with_module(module);
+            }
+            prop_assert_eq!(course.total_lessons(), num_modules * lessons_per_module);
+        }
+
+        #[test]
+        fn test_module_duration_is_sum(
+            durations in prop::collection::vec(0u32..120, 1..10)
+        ) {
+            let mut module = Module::new("test", "Test");
+            let expected_total: u32 = durations.iter().sum();
+
+            for (i, &duration) in durations.iter().enumerate() {
+                module = module.with_lesson(
+                    Lesson::new(format!("l-{}", i), format!("L{}", i))
+                        .with_duration(duration)
+                );
+            }
+
+            prop_assert_eq!(module.total_duration_minutes(), expected_total);
+        }
+    }
+}

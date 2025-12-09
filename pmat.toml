@@ -1,0 +1,50 @@
+# PMAT Configuration - Profesor Learning Platform
+# Quality standards aligned with PAIML Sovereign AI Stack
+
+[quality_gate]
+max_cyclomatic_complexity = 15    # Strict for learning platform code
+max_cognitive_complexity = 15     # Keep code teachable
+max_satd_comments = 0             # Zero tolerance for technical debt
+min_test_coverage = 95.0          # Per CLAUDE.md global requirement
+
+[documentation]
+required_updates = [
+    "docs/profesor-spec.md",
+    "CHANGELOG.md"
+]
+task_id_pattern = "PROF-[0-9]{4}"
+
+[toyota_way]
+enable_mcp_first_dogfooding = true
+enforce_jidoka_automation = true    # Auto-grading with immediate feedback
+kaizen_cycle_enforcement = true     # Spaced repetition improves retention
+
+[sprint_management]
+current_sprint = "v0.1.0"
+velocity_tracking_enabled = true
+task_id_enforcement = true
+
+[wasm]
+# WASM-specific requirements for pure WASM stack
+target = "wasm32-unknown-unknown"
+max_bundle_size_bytes = 2_097_152   # 2 MB per spec
+zero_javascript = true
+
+[dependencies]
+# PAIML stack dependencies (WASM-compatible only)
+allowed = [
+    "trueno",
+    "aprender",
+    "presentar",
+    "presentar-core",
+    "presentar-widgets",
+    "presentar-yaml",
+    "alimentar"
+]
+# Explicitly banned (not WASM-compatible)
+banned = [
+    "batuta",
+    "repartir",
+    "entrenar",
+    "certeza"
+]

@@ -1,0 +1,121 @@
+# Module 1 Quiz: Rust Basics
+# Tests understanding of basic Rust concepts
+
+id: quiz-mod01
+title: "Module 1 Quiz: Rust Basics"
+time_limit: 1800  # 30 minutes in seconds
+passing_score: 0.7
+shuffle: true
+max_attempts: 3
+
+questions:
+  - type: multiple_choice
+    id: q1
+    prompt: "What keyword is used to declare an immutable variable in Rust?"
+    options:
+      - "var"
+      - "let"
+      - "const"
+      - "mut"
+    correct: 1
+    explanation: "In Rust, `let` declares a variable. By default, variables are immutable. Use `let mut` for mutable variables."
+    points: 10
+
+  - type: multiple_choice
+    id: q2
+    prompt: "Which of the following is NOT a scalar type in Rust?"
+    options:
+      - "i32"
+      - "bool"
+      - "String"
+      - "char"
+    correct: 2
+    explanation: "String is a compound type (a growable, heap-allocated string). Scalar types are integers, floats, booleans, and characters."
+    points: 10
+
+  - type: multiple_choice
+    id: q3
+    prompt: "What does the `!` in `println!` indicate?"
+    options:
+      - "It's an error"
+      - "It's a macro"
+      - "It's a reference"
+      - "It's mutable"
+    correct: 1
+    explanation: "The `!` indicates a macro call in Rust. Macros are expanded at compile time and can do things functions cannot."
+    points: 10
+
+  - type: code_completion
+    id: q4
+    prompt: "Complete the function to return the sum of two integers:"
+    code_template: |
+      fn add(a: i32, b: i32) -> i32 {
+          {{blank1}}
+      }
+    blanks:
+      - id: blank1
+        acceptable_answers:
+          - "a + b"
+          - "return a + b;"
+          - "return a + b"
+          - "a+b"
+        hint: "Use the + operator and remember implicit returns"
+    test_cases:
+      - name: "basic addition"
+        input: "add(2, 3)"
+        expected: "5"
+      - name: "negative numbers"
+        input: "add(-1, 1)"
+        expected: "0"
+    points: 20
+
+  - type: multiple_select
+    id: q5
+    prompt: "Which of the following are valid integer types in Rust? (Select all that apply)"
+    options:
+      - "i32"
+      - "u64"
+      - "int"
+      - "usize"
+    correct: [0, 1, 3]
+    explanation: "`int` is not a valid Rust type. Rust uses explicit size types like i32, u64, and architecture-dependent types like usize."
+    points: 15
+
+  - type: ordering
+    id: q6
+    prompt: "Order these steps to compile and run a Rust program:"
+    items:
+      - "Write code in main.rs"
+      - "Run `cargo build`"
+      - "Execute the binary"
+      - "Create project with `cargo new`"
+    correct_order: [3, 0, 1, 2]
+    explanation: "First create the project, then write code, build it, and finally execute."
+    points: 15
+
+  - type: freeform_code
+    id: q7
+    prompt: "Write a function `is_even` that returns true if a number is even."
+    language: rust
+    starter_code: |
+      fn is_even(n: i32) -> bool {
+          // Your code here
+      }
+    test_cases:
+      - name: "even number"
+        input: "is_even(4)"
+        expected: "true"
+      - name: "odd number"
+        input: "is_even(7)"
+        expected: "false"
+    hidden_test_cases:
+      - name: "zero"
+        input: "is_even(0)"
+        expected: "true"
+      - name: "negative even"
+        input: "is_even(-2)"
+        expected: "true"
+      - name: "negative odd"
+        input: "is_even(-3)"
+        expected: "false"
+    points: 20

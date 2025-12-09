@@ -1,0 +1,45 @@
+[book]
+title = "The Profesor Book"
+description = "WASM-Native Learning Management - A Test-Driven Development Guide"
+authors = ["PAIML Team"]
+language = "en"
+multilingual = false
+src = "src"
+
+[preprocessor.links]
+
+[build]
+build-dir = "book"
+create-missing = true
+use-default-preprocessors = true
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "navy"
+curly-quotes = true
+mathjax-support = false
+copy-fonts = true
+no-section-label = false
+additional-css = []
+additional-js = []
+git-repository-url = "https://github.com/paiml/profesor"
+git-repository-icon = "fa-github"
+edit-url-template = "https://github.com/paiml/profesor/edit/main/book/{path}"
+
+[output.html.fold]
+enable = true
+level = 0
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+
+[output.html.print]
+enable = true

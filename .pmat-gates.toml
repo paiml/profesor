@@ -1,0 +1,49 @@
+# PMAT Quality Gate Configuration
+# Profesor Learning Platform - WASM-Native
+
+[gates]
+# Run clippy linter
+run_clippy = true
+
+# Enforce strict clippy (-D warnings)
+clippy_strict = true
+
+# Run test suite
+run_tests = true
+
+# Test timeout in seconds
+test_timeout = 300
+
+# Check code coverage
+check_coverage = true
+
+# Minimum coverage percentage (95% per CLAUDE.md global requirement)
+min_coverage = 95.0
+
+# Check cyclomatic complexity
+check_complexity = true
+
+# Maximum cyclomatic complexity per function
+max_complexity = 15
+
+# WASM-specific gates
+[gates.wasm]
+# Verify WASM target compiles
+check_wasm_build = true
+
+# Maximum WASM bundle size (2 MB per spec)
+max_bundle_size_bytes = 2_097_152
+
+# Verify no JavaScript dependencies
+check_zero_javascript = true
+
+# Performance gates (per spec Section 10)
+[gates.performance]
+# Quiz render time < 16ms (60fps)
+max_render_ms = 16
+
+# Code execution timeout < 5s
+max_execution_ms = 5000
+
+# Memory usage < 64 MB
+max_memory_mb = 64

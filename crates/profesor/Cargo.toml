@@ -1,0 +1,38 @@
+[package]
+name = "profesor"
+description = "WASM-native learning management system"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+profesor-core = { workspace = true }
+profesor-quiz = { workspace = true }
+profesor-lab = { workspace = true }
+profesor-sim = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+# Lints - allow unsafe code for WASM FFI exports (overrides workspace)
+[lints.rust]
+unsafe_code = "allow"  # Required for #[no_mangle] and raw pointer FFI
+missing_docs = "warn"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+not_unsafe_ptr_arg_deref = "allow"  # FFI functions take raw pointers from external callers
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["std"]
+std = ["profesor-core/std", "profesor-quiz/std", "profesor-lab/std", "profesor-sim/std", "serde/std"]

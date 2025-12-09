@@ -1,0 +1,84 @@
+# PMAT Quality Configuration
+# Profesor Learning Platform - Tuned for A+ Quality Grade
+
+[complexity]
+# Strict thresholds for teachable code
+cyclomatic_threshold = 15
+cognitive_threshold = 15
+max_nesting_depth = 4
+max_function_lines = 80
+max_file_lines = 500
+
+[entropy]
+# Code duplication detection
+enabled = true
+min_pattern_occurrences = 10
+min_pattern_lines = 8
+max_violations_to_report = 50
+pattern_similarity_threshold = 0.95
+ignore_test_files = true
+ignore_generated_files = true
+ignore_patterns = [
+    "*/target/*",
+    "*_test.rs",
+    "*_tests.rs",
+    "*/tests/*"
+]
+
+[satd]
+# Zero tolerance for technical debt comments
+enabled = true
+zero_tolerance = true
+patterns = [
+    "TODO",
+    "FIXME",
+    "HACK",
+    "XXX",
+    "REFACTOR",
+    "OPTIMIZE"
+]
+
+[dead_code]
+# Dead code detection
+enabled = true
+ignore_test_functions = true
+ignore_cfg_test = true
+threshold_percentage = 0.5  # Flag if more than 0.5% dead code
+
+[coverage]
+# Coverage requirements (95% per global CLAUDE.md)
+minimum_coverage = 95.0
+enforce_on_new_code = true
+ignore_test_files = true
+
+[documentation]
+# Documentation requirements
+minimum_doc_coverage = 80.0
+require_examples = true
+require_safety_docs = true
+
+[security]
+# Security scanning
+enabled = true
+scan_dependencies = true
+check_unsafe_code = true
+max_unsafe_blocks = 5  # Minimal unsafe for WASM interop only
+
+[quality_gate]
+# Overall quality gate configuration
+fail_on_any_violation = false
+aggregate_scoring = true
+weights = { complexity = 0.25, entropy = 0.15, satd = 0.20, dead_code = 0.15, coverage = 0.15, documentation = 0.10 }
+
+# Grade thresholds
+[grades]
+a_plus = 95
+a = 90
+a_minus = 85
+b_plus = 80
+b = 75
+b_minus = 70
+c_plus = 65
+c = 60
+d = 50
+f = 0

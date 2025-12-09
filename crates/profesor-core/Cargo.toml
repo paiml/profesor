@@ -1,0 +1,24 @@
+[package]
+name = "profesor-core"
+description = "Core types and traits for Profesor LMS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_yaml = { workspace = true }
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["std"]
+std = ["serde/std"]

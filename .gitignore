@@ -19,3 +19,16 @@ target
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# PMAT metrics and cache
+.pmat/
+.pmat-cache/
+.pmat-metrics/
+.pmat-qa/
+.pmat-tickets/
+deep_context.md
+
+# Coverage artifacts
+lcov.info
+*.profraw
+*.profdata
