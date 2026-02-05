@@ -32,3 +32,9 @@ deep_context.md
 lcov.info
 *.profraw
 *.profdata
+
+# PMAT
+.pmat/backup/
+.pmat/context.idx/
+.pmat/workspace.idx/
+.pmat/deps-cache.json

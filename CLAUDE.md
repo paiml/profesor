@@ -44,6 +44,37 @@ ruchy serve dist/ --port 8000 --watch --watch-wasm --verbose
 
 **FORBIDDEN**: python http.server, npx http-server, any JS-based server
 
+## Code Search (pmat query)
+
+**NEVER use grep or rg for code discovery.** Use `pmat query` instead -- it returns quality-annotated, ranked results with TDG scores and fault annotations.
+
+```bash
+# Find functions by intent
+pmat query "quiz generation" --limit 10
+
+# Find high-quality code
+pmat query "course structure" --min-grade A --exclude-tests
+
+# Find with fault annotations (unwrap, panic, unsafe, etc.)
+pmat query "validation" --faults
+
+# Filter by complexity
+pmat query "grading logic" --max-complexity 10
+
+# Cross-project search
+pmat query "educational content" --include-project ../aprender
+
+# Git history search (find code by commit intent via RRF fusion)
+pmat query "fix quiz scoring" -G
+pmat query "course builder" --git-history
+
+# Enrichment flags (combine freely)
+pmat query "course builder" --churn              # git volatility (commit count, churn score)
+pmat query "template" --duplicates           # code clone detection (MinHash+LSH)
+pmat query "assessment" --entropy           # pattern diversity (repetitive vs unique)
+pmat query "quiz validation" --churn --duplicates --entropy --faults -G  # full audit
+```
+
 ## Build Commands
 
 ```bash
